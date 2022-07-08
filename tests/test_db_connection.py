@@ -1,10 +1,9 @@
-import psycopg2
+from test_support.db_fixtures import db_conn
 
 
-def test_db_connection():
-    conn = psycopg2.connect(
-        host="db",
+def test_db_connection(db_conn):
+    with db_conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM information_schema.tables")
+        tables = cursor.fetchall()
 
-        user="postgres",
-        password="postgres")
-
+    assert 'pg_catalog' in tables

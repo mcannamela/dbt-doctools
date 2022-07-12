@@ -9,7 +9,7 @@ from tenacity import retry, wait_exponential, retry_if_exception_type, retry_if_
              retry_if_exception_message(match='Connection refused'),
        wait=wait_exponential(multiplier=1, min=4, max=10))
 def connect_to_test_db():
-    psycopg2.connect(
+    return psycopg2.connect(
         host="db",
         database='dbt_doctools_test',
         user="postgres",

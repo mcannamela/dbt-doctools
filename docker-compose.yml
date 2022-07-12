@@ -18,8 +18,6 @@ services:
     command: ['bash']
     volumes:
       - .:/dbt-doctools
-    environment:
-      - PYTHONPATH="/dbt-doctools"
 
 volumes:
   db:

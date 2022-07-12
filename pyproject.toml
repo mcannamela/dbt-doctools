@@ -19,6 +19,12 @@ psycopg2-binary = "^2.9.3"
 pytest = "^7.1.2"
 hypothesis = "^6.48.2"
 
+[tool.pytesttest.ini_options]
+pythonpath = [
+  "."
+]
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

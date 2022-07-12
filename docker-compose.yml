@@ -18,6 +18,8 @@ services:
     command: ['bash']
     volumes:
       - .:/dbt-doctools
+    environment:
+      - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
 
 volumes:
   db:

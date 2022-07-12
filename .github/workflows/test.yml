@@ -15,6 +15,6 @@ jobs:
     - name: Check running containers
       run: docker ps -a
     - name: Check logs
-      run: docker logs backend
+      run: docker logs db
     - name: Run test suite
       run: docker-compose run dbt-doctools python -m pytest tests

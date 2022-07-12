@@ -51,7 +51,7 @@ jobs:
       run: sleep 30s
       shell: bash
     - name: Check db logs
-      run: docker logs dbt-doctools-db-1
+      run: docker logs dbt-doctools_db_1
     - name: Run test suite
       run: docker-compose run dbt-doctools python -m pytest tests
 

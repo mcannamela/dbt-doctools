@@ -33,6 +33,8 @@ def db_conn():
                 password="postgres")
 
             yield conn_with_db
+        else:
+            raise
 
 @fixture
 def db_cursor(db_conn):

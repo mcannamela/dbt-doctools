@@ -51,11 +51,10 @@ jobs:
       run: docker logs dbt-doctools_db_1
     - name: Build dbt dummy project
       run: |
-        cd dummy_dbt_project/dummy
-        dbt deps
-        dbt seed
-        dbt run
-        dbt test
+        docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt deps
+        docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt seed
+        docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt run
+        docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt test
     - name: Run test suite
       run: docker-compose run dbt-doctools python -m pytest tests
 

@@ -49,6 +49,14 @@ jobs:
       run: docker ps -a
     - name: Check db logs
       run: docker logs dbt-doctools_db_1
+    - name: Build dbt dummy project
+      run: |
+        cd dummy_dbt_project/dummy
+        dbt deps
+        dbt seed
+        dbt run
+        dbt test
     - name: Run test suite
       run: docker-compose run dbt-doctools python -m pytest tests
+
 

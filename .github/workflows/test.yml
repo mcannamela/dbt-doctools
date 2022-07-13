@@ -47,9 +47,6 @@ jobs:
       run: docker-compose -f docker-compose.yml up -d
     - name: Check running containers
       run: docker ps -a
-#    - name: Sleep for 30 seconds
-#      run: sleep 30s
-#      shell: bash
     - name: Check db logs
       run: docker logs dbt-doctools_db_1
     - name: Run test suite

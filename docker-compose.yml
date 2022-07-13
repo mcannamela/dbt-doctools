@@ -3,6 +3,11 @@ services:
   db:
     image: postgres:14.1-alpine
     restart: always
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-U", "postgres" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -14,6 +19,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
 
     command: ['bash']
     volumes:

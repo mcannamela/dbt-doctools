@@ -22,12 +22,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
     command: ['bash']
     volumes:
       - .:/dbt-doctools
     environment:
       - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
+      - DBT_DATABASE=dbt_doctools_test
 
 volumes:
   db:

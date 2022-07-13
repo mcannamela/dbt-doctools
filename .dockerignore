@@ -1,3 +1,5 @@
 dist
 .venv
 .pytest_cache
+docker
+logs

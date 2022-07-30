@@ -23,6 +23,8 @@ services:
       db:
         condition: service_healthy
     command: ['bash']
+    ports:
+      - '8080:8080'
     volumes:
       - .:/dbt-doctools
     environment:

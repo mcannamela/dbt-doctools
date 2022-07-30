@@ -1,0 +1,14 @@
+dummy:
+  outputs:
+
+    dev:
+      type: postgres
+      threads: 4
+      host: db
+      port: 5432
+      user: postgres
+      pass: postgres
+      dbname: dbt_doctools_test
+      schema: transforms
+
+  target: dev

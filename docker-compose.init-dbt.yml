@@ -1,0 +1,16 @@
+version: '3.9'
+services:
+  init-dbt:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ['bash', '-c', '../init_dbt.sh']
+    working_dir: /dbt-doctools/dummy_dbt_project/dummy
+    volumes:
+      - .:/dbt-doctools
+    environment:
+      - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
+      - DBT_DATABASE=dbt_doctools_test

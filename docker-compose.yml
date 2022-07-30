@@ -1,8 +1,13 @@
-version: '3.8'
+version: '3.9'
 services:
   db:
     image: postgres:14.1-alpine
     restart: always
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-U", "postgres" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -14,11 +19,17 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-
+    depends_on:
+      db:
+        condition: service_healthy
     command: ['bash']
+    ports:
+      - '8080:8080'
     volumes:
       - .:/dbt-doctools
-
+    environment:
+      - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
+      - DBT_DATABASE=dbt_doctools_test
 
 volumes:
   db:

@@ -6,7 +6,7 @@ sources:
     tables:
       - name: some_old_source
         description: >
-          A source that existed in our dbt project and already had documentation
+          A source that existed in our dbt project and already had documentation and downstream models
         columns:
           - name: old_source_id
             description: Id of the record
@@ -15,3 +15,11 @@ sources:
               - not_null
           - name: value
             description: Value of the record
+      - name: some_new_source
+        description: >
+          A new source that has no docs or downstream models
+        columns:
+          - name: new_source_id
+            description: ""
+          - name: value
+            description: ""

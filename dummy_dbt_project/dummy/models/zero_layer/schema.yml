@@ -1,0 +1,25 @@
+
+version: 2
+
+models:
+  - name: old_zero_layer
+    description: "One to one with the old source"
+    columns:
+      - name: old_id
+        description: "Id of the record"
+        tests:
+          - unique
+          - not_null
+      - name: old_value
+        description: "Value of the record"
+
+  - name: old_one_layer
+    description: "A starter dbt model"
+    columns:
+      - name: old_id
+        description: "Id of the record"
+        tests:
+          - unique
+          - not_null
+      - name: old_value
+        description: "Value of the record"

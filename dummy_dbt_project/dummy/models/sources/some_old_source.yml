@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: sources
+    description: Dummy sources
+    tables:
+      - name: some_old_source
+        description: >
+          A source that existed in our dbt project and already had documentation
+        columns:
+          - name: old_source_id
+            description: Id of the record
+            tests:
+              - unique
+              - not_null
+          - name: value
+            description: Value of the record

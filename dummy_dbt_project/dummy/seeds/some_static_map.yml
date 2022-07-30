@@ -1,0 +1,17 @@
+version: 2
+
+seeds:
+  - name: some_static_map
+    description: A static map we use sometimes
+    docs:
+      show: true
+    column_types:
+      key: text
+      value: bigint
+
+    columns:
+      - name: key
+        description: Key for the map
+
+      - name: value
+        description: Value for the map

@@ -2,14 +2,14 @@ from typing import Tuple, List
 
 import dbt
 from dbt import flags
-from dbt.config import read_user_config
+from dbt.config import read_user_config, RuntimeConfig
 from dbt.contracts.graph.manifest import Manifest
 from dbt.graph import Graph
 from dbt.main import parse_args, adapter_management
 
 
-def obtain_manifest(dbt_command: str = 'compile', dbt_args: List[str] = tuple(),
-                    dbt_command_args: List[str] = tuple()) -> Tuple[Manifest, Graph]:
+def obtain_manifest_and_graph_and_config(dbt_command: str = 'compile', dbt_args: List[str] = tuple(),
+                                         dbt_command_args: List[str] = tuple()) -> Tuple[Manifest, Graph, RuntimeConfig]:
     """Get a fully-loaded dbt manifest by hijacking a compile task
 
     Much of this is copy-pasta from dbt's own interals, found by following the main entrypoint.
@@ -27,4 +27,5 @@ def obtain_manifest(dbt_command: str = 'compile', dbt_args: List[str] = tuple(),
         task.compile_manifest()
     m = task.manifest
     g = task.graph
-    return m, g
+    c = task.config
+    return m, g, c

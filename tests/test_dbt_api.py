@@ -1,18 +1,19 @@
 from typing import Union, MutableMapping
 
-from dbt.contracts.files import SchemaSourceFile, SourceFile
+from dbt.contracts.files import SchemaSourceFile, SourceFile, AnySourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.graph import Graph
 
 
-def test_obtain_manifest(manifest, graph):
-    m, g = manifest, graph
+def test_obtain_manifest_and_graph_and_config(manifest, graph, config):
+    m, g = manifest, graph, config
     assert isinstance(m, Manifest)
     assert isinstance(g, Graph)
-    files: MutableMapping[str, Union[SchemaSourceFile, SourceFile]] = m.files
-    x = {k: f for k, f in files.items() if isinstance(f, SchemaSourceFile)}
-    assert 'dummy://models/sources/some_sources.yml' in x
-    y = x['dummy://models/sources/some_sources.yml']
+    files: MutableMapping[str, AnySourceFile] = m.files
+    has_sources = {k: f for k, f in files.items() if isinstance(f, SchemaSourceFile) and f.sources}
+
+    assert 'dummy://models/sources/some_sources.yml' in has_sources
+    y = has_sources['dummy://models/sources/some_sources.yml']
     sources = y.dfy['sources']
     assert len(sources) == 1
     some_old_source = {s['name']: s for s in sources[0]['tables']}['some_old_source']

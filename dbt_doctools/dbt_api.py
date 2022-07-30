@@ -1,17 +1,15 @@
-from typing import Dict, Tuple, List
+from typing import Tuple, List
 
+import dbt
 from dbt import flags
 from dbt.config import read_user_config
-from dbt.contracts.files import BaseSourceFile, SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.graph import Graph
-from dbt.main import main as dbt_main, parse_args, adapter_management, run_from_args
-import dbt
-from yaml import load, dump
-from yaml import CLoader as Loader, CDumper as Dumper
+from dbt.main import parse_args, adapter_management
 
 
-def obtain_manifest(dbt_command:str='compile', dbt_args: List[str] = tuple(), dbt_command_args:List[str]=tuple()) -> Tuple[Manifest, Graph]:
+def obtain_manifest(dbt_command: str = 'compile', dbt_args: List[str] = tuple(),
+                    dbt_command_args: List[str] = tuple()) -> Tuple[Manifest, Graph]:
     """Get a fully-loaded dbt manifest by hijacking a compile task
 
     Much of this is copy-pasta from dbt's own interals, found by following the main entrypoint.

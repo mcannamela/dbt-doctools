@@ -63,6 +63,8 @@ def create_database():
 def database_name():
     k = 'DBT_DATABASE'
     nm = getenv(k)
+    if nm is None:
+        raise ValueError(f"Be sure to set env var {k}")
     if len(nm) < 3:
         raise ValueError(f"Pick a longer database name to avoid confusion: {k}={nm}")
     return nm

@@ -50,7 +50,7 @@ jobs:
     - name: Check db logs
       run: docker logs dbt-doctools_db_1
     - name: Initialize database
-      run: PYTHONPATH="$(pwd)" python dummy_dbt_project/init_db.py
+      run: docker-compose -f docker-compose.yml  -f docker-compose.init-db.yml run init-db
     - name: Build dbt dummy project
       run: |
         docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt deps

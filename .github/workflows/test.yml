@@ -49,11 +49,14 @@ jobs:
       run: docker ps -a
     - name: Check db logs
       run: docker logs dbt-doctools_db_1
+    - name: Initialize database
+      run: PYTHONPATH="$(pwd)" python dummy_dbt_project/init_db.py
     - name: Build dbt dummy project
       run: |
         docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt deps
         docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt seed
         docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt run
         docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt test
+        docker compose run -w /dbt-doctools/dummy_dbt_project/dummy dbt-doctools dbt docs generate
     - name: Run test suite
       run: docker-compose run dbt-doctools python -m pytest tests

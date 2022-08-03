@@ -14,7 +14,7 @@ sources:
               - unique
               - not_null
           - name: value
-            description: Value of the record
+            description: "{{doc('some_old_source__value')}}"
       - name: some_new_source
         description: >
           A new source that has no docs or downstream models

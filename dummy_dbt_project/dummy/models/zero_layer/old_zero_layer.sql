@@ -5,7 +5,7 @@ with source_data as (
     select
         old_source_id as old_id,
         old_source_value as old_value
-    from {{source('sources', 'some_old_source')}}
+    from {{source('dummy_sources', 'some_old_source')}}
 
 )
 

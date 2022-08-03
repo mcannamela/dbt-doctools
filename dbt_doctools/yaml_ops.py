@@ -1,8 +1,10 @@
-from typing import Iterable, Tuple, Callable, TypeVar, Optional
+from typing import Iterable, Tuple, Callable, TypeVar, Optional,  Union, Protocol, List, Dict, Any
 
 T = TypeVar('T')
 U = TypeVar('U')
 V = TypeVar('V')
+
+YamlFragment = Dict[str, Any]
 
 
 class DegenerateMatches(LookupError):

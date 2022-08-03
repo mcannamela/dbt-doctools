@@ -26,7 +26,7 @@ def attempt_and_recover_if_database_dne(f: Callable[[], Any], recover: Callable[
     try:
         val = f()
     except psycopg2.OperationalError as exc:
-        if 'database "dbt_doctools_test" does not exist' in str(exc):
+        if f'database "{database_name()}" does not exist' in str(exc):
             recover()
             val = f()
         else:
@@ -68,3 +68,7 @@ def database_name():
     if len(nm) < 3:
         raise ValueError(f"Pick a longer database name to avoid confusion: {k}={nm}")
     return nm
+
+
+def source_schema_name():
+    return 'dummy_sources'

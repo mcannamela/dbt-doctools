@@ -1,7 +1,7 @@
 version: 2
 
 sources:
-  - name: sources
+  - name: dummy_sources
     description: Dummy sources
     tables:
       - name: some_old_source

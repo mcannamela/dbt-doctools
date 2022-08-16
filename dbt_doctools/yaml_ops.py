@@ -39,4 +39,4 @@ def unsafe_get_matching_singleton_by_key(elements: Iterable[Tuple[U, V]], key: U
     except NoMatch as exc:
         raise NoMatch(f"No match for '{key}'") from exc
     except DegenerateMatches as exc:
-        raise NoMatch(f"Multiple matches for '{key}'") from exc
+        raise DegenerateMatches(f"Multiple matches for '{key}'") from exc

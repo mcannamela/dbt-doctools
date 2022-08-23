@@ -19,13 +19,11 @@ def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str 
     manifest, _, config = obtain_manifest_and_graph_and_config(
         dbt_command_args=['--project-dir', project_dir]
     )
-    source, file_of_source = extract_source(manifest, config.project_name, source_name, table_name)
-    source_dfy = extract_source_yaml_fragment_from_file(file_of_source, source_name)
 
+    source, file_of_source = extract_source(manifest, config.project_name, source_name, table_name)
     new_source_table_dfy, text_blocks = refactor_to_doc_blocks(source, file_of_source)
 
-
-
+    source_dfy = extract_source_yaml_fragment_from_file(file_of_source, source_name)
     new_source_dfy = replace_source_table_yaml_fragment(source_dfy, new_source_table_dfy)
     logger.debug(f'refactored source: \n{new_source_dfy}')
 

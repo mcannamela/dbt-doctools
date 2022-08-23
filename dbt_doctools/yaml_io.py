@@ -20,8 +20,11 @@ def create_or_append_companion_markdown(content: str, schema_file: SchemaSourceF
     if maybe_file is not None:
         logger.info(f"Companion markdown file {maybe_file.path.full_path} already exists! Appending.")
         mode = 'a'
+        preamble = '\n\n'
     else:
         mode = 'w'
+        preamble=''
     logger.info(f"Writing companion markdown to {path}")
     with open(path, mode) as f:
+        f.write(preamble)
         f.write(content)

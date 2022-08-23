@@ -371,6 +371,17 @@ extra = ["lxml (>=4.6)", "pygraphviz (>=1.9)", "pydot (>=1.4.2)", "sympy (>=1.10
 test = ["pytest (>=7.1)", "pytest-cov (>=3.0)", "codecov (>=2.1)"]
 
 [[package]]
+name = "oyaml"
+version = "1.0"
+description = "Ordered YAML: drop-in replacement for PyYAML which preserves dict ordering"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+pyyaml = "*"
+
+[[package]]
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
@@ -661,7 +672,7 @@ dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8"
-content-hash = "2bfbcfe4781a14e71818d46c6a68d222284a2d8b8cf3dcbdad425027eb98de10"
+content-hash = "4ff7c2b275ea67761c3d3b365009f819731e786b3889946ff1b1bcdcc881a86b"
 
 [metadata.files]
 agate = [
@@ -957,6 +968,7 @@ msgpack = [
     {file = "msgpack-1.0.4.tar.gz", hash = "sha256:f5d869c18f030202eb412f08b28d2afeea553d6613aee89e200d7aca7ef01f5f"},
 ]
 networkx = []
+oyaml = []
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
     {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},

@@ -7,7 +7,7 @@ from oyaml import dump
 
 from dbt_doctools.markdown_ops import DocsBlock
 from dbt_doctools.source_ops import maybe_extract_companion_markdown_file
-from dbt_doctools.yaml_ops import YamlFragment, ordered_fragment
+from dbt_doctools.yaml_ops import YamlFragment, ordered_fragment, apply_to_leaves
 
 
 def dbt_sort_key(yaml_key: str):
@@ -19,7 +19,9 @@ def dbt_sort_key(yaml_key: str):
 def overwrite_yaml_file(yaml_doc: YamlFragment, schema_file: SchemaSourceFile):
     path = schema_file.path.full_path
     logger.info(f"Overwriting yaml at {path}")
-    ordered_yaml_doc = ordered_fragment(yaml_doc, lambda k, v: dbt_sort_key(k))
+    clean_yaml_doc = apply_to_leaves(yaml_doc, lambda s: s.strip('\n') if isinstance(s, str) else s)
+    ordered_yaml_doc = ordered_fragment(clean_yaml_doc, lambda t: dbt_sort_key(t[0]))
+
     with open(path, 'w') as f:
         dump(ordered_yaml_doc, f)
 

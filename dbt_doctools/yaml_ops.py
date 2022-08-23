@@ -43,10 +43,19 @@ def unsafe_get_matching_singleton_by_key(elements: Iterable[Tuple[U, V]], key: U
         raise DegenerateMatches(f"Multiple matches for '{key}'") from exc
 
 
-def ordered_fragment(yaml:Union[List[Any], Dict[str, Any], Any], sort_items:Callable[[Tuple[T,U]], V]=None):
+def apply_to_leaves(yaml: Union[List[Any], Dict[str, Any], Any], f: Callable[[Any], V]):
+    if isinstance(yaml, list):
+        return [apply_to_leaves(y, f) for y in yaml]
+    elif isinstance(yaml, dict):
+        return {k: apply_to_leaves(v, f) for k, v in yaml.items()}
+    else:
+        return f(yaml)
+
+
+def ordered_fragment(yaml: Union[List[Any], Dict[str, Any], Any], sort_items: Callable[[Tuple[T, U]], V] = None):
     if isinstance(yaml, list):
         return [ordered_fragment(y, sort_items) for y in yaml]
     elif isinstance(yaml, dict):
-        return OrderedDict([(k, ordered_fragment(v, sort_items)) for k,v in sorted(yaml.items(), key=sort_items)])
+        return OrderedDict([(k, ordered_fragment(v, sort_items)) for k, v in sorted(yaml.items(), key=sort_items)])
     else:
         return yaml

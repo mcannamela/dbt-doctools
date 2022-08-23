@@ -51,6 +51,12 @@ def extract_source(m: Manifest, project_name, source_name: str, table_name: str)
             f"Nothing found for source '{source_name}' table '{table_name}' in project '{project_name}'")
 
 
+def maybe_extract_companion_markdown_file(manifest:Manifest, file:SchemaSourceFile):
+    path = file.path.full_path.replace('.yaml', '.md').replace('.yml', '.md')
+    for f in manifest.files.values():
+        if path == f.path.full_path:
+            return f
+
 def extract_source_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str) -> YamlFragment:
     """Return the Python representation of the yaml fragment that defines the passed dbt source
 

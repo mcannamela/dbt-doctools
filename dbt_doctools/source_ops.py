@@ -10,17 +10,6 @@ from dbt_doctools.yaml_ops import unsafe_get_matching_singleton_by_key, YamlFrag
 from copy import deepcopy
 
 
-def blah():
-    x = {k: f for k, f in files.items() if isinstance(f, SchemaSourceFile)}
-    assert 'dummy://models/sources/some_old_source.yml' in x
-    y = x['dummy://models/sources/some_old_source.yml']
-    sources = y.dfy['sources']
-    assert len(sources) == 1
-    some_old_source = {s['name']: s for s in sources[0]['tables']}['some_old_source']
-    column_descriptions = {v['name']: v['description'] for v in some_old_source['columns']}
-    assert set(column_descriptions.keys()) == {'old_source_id', 'value'}
-
-
 def extract_source(m: Manifest, project_name, source_name: str, table_name: str) -> Tuple[
     ParsedSourceDefinition, SchemaSourceFile]:
     """Extract the dbt source definition and schema file in which it resides from a whole Manifest

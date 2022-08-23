@@ -1,4 +1,5 @@
-from typing import Iterable, Tuple, Callable, TypeVar, Optional,  Union, Protocol, List, Dict, Any
+from typing import Iterable, Tuple, Callable, TypeVar, Optional, Union, Protocol, List, Dict, Any
+from collections import OrderedDict
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -40,3 +41,12 @@ def unsafe_get_matching_singleton_by_key(elements: Iterable[Tuple[U, V]], key: U
         raise NoMatch(f"No match for '{key}'") from exc
     except DegenerateMatches as exc:
         raise DegenerateMatches(f"Multiple matches for '{key}'") from exc
+
+
+def ordered_fragment(yaml:Union[List[Any], Dict[str, Any], Any], sort_items:Callable[[Tuple[T,U]], V]=None):
+    if isinstance(yaml, list):
+        return [ordered_fragment(y, sort_items) for y in yaml]
+    elif isinstance(yaml, dict):
+        return OrderedDict([(k, ordered_fragment(v, sort_items)) for k,v in sorted(yaml.items())])
+    else:
+        return yaml

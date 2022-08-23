@@ -120,7 +120,7 @@ def replace_source_yaml_fragment(sources_file: YamlFragment, source: YamlFragmen
     return new_sources_file
 
 
-def refactor_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: SchemaSourceFile) -> Tuple[
+def extract_column_descriptions_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: SchemaSourceFile) -> Tuple[
     YamlFragment, Dict[str, DocsBlock]]:
     """Convert text column descriptions to dbt doc blocks
 
@@ -152,7 +152,6 @@ def refactor_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: Schem
         nm = c['name']
         if nm in text_blocks:
             c['description'] = text_blocks[nm].doc_ref()
-
 
     return new_source_table_dfy, text_blocks
 

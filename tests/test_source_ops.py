@@ -2,7 +2,7 @@ from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.parsed import ParsedSourceDefinition
 
 from dbt_doctools.source_ops import extract_source, refactor_to_doc_blocks, refactor_to_one_file_per_table, \
-    extract_source_table_yaml_fragment_from_file, replace_source_table_yaml_fragment
+    extract_source_table_yaml_fragment_from_file, replace_source_table_yaml_fragment, replace_source_yaml_fragment
 
 
 def test_extract_source(manifest, config):
@@ -29,8 +29,16 @@ def test_refactor_to_one_file_per_table(manifest, config):
 
 
 def test_replace_source_table_yaml_fragment():
-    t = {'a':'b', 'tables':[{'t1':'v1', 'name':'first'}, {'t2':'v2', 'name':'second'}]}
-    f = {'t2':'v2_prime', 'name':'second'}
+    t = {'a': 'b', 'tables': [{'t1': 'v1', 'name': 'first'}, {'t2': 'v2', 'name': 'second'}]}
+    f = {'t2': 'v2_prime', 'name': 'second'}
     new_t = replace_source_table_yaml_fragment(t, f)
     assert new_t['tables'][0] == t['tables'][0]
     assert new_t['tables'][1] == f
+
+
+def test_replace_source_yaml_fragment():
+    t = {'a': 'b', 'sources': [{'t1': 'v1', 'name': 'first'}, {'t2': 'v2', 'name': 'second'}]}
+    f = {'t2': 'v2_prime', 'name': 'second'}
+    new_t = replace_source_yaml_fragment(t, f)
+    assert new_t['sources'][0] == t['sources'][0]
+    assert new_t['sources'][1] == f

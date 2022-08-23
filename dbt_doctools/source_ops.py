@@ -68,7 +68,8 @@ def extract_source_yaml_fragment_from_file(file_of_source: SchemaSourceFile, sou
     return source_dfy
 
 
-def extract_source_table_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str, table_name:str) -> YamlFragment:
+def extract_source_table_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str,
+                                                 table_name: str) -> YamlFragment:
     """Return the Python representation of the yaml fragment that defines the passed dbt source table
 
     Args:
@@ -89,7 +90,7 @@ def extract_source_table_yaml_fragment_from_file(file_of_source: SchemaSourceFil
     return source_table_dfy
 
 
-def replace_source_table_yaml_fragment(source:YamlFragment, source_table:YamlFragment)->YamlFragment:
+def replace_source_table_yaml_fragment(source: YamlFragment, source_table: YamlFragment) -> YamlFragment:
     """Replace the yaml fragment for one source table within a dbt source
 
     If the `source` does not contain a table with the same name as `source_table`, this is a no-op.
@@ -102,11 +103,29 @@ def replace_source_table_yaml_fragment(source:YamlFragment, source_table:YamlFra
         A new representation of the dbt source with the table corresponding to `source_table` replaced
     """
     new_source = deepcopy(source)
-    new_source['tables'] = [source_table if t['name']==source_table['name'] else t for t in new_source['tables']]
+    new_source['tables'] = [source_table if t['name'] == source_table['name'] else t for t in new_source['tables']]
     return new_source
 
 
-def refactor_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: SchemaSourceFile)->Tuple[YamlFragment, Dict[str,DocsBlock]]:
+def replace_source_yaml_fragment(sources_file: YamlFragment, source: YamlFragment) -> YamlFragment:
+    """Replace the yaml fragment for one source table within a dbt source
+
+    If the `source` does not contain a table with the same name as `source_table`, this is a no-op.
+
+    Args:
+        sources_file: Python representation of the dbt source yaml file, which may contain many sources
+        source: Python representation of an entire dbt source within `sources_file` to be replaced
+
+    Returns:
+        A new representation of the dbt sources file with the source corresponding to `source` replaced
+    """
+    new_sources_file = deepcopy(sources_file)
+    new_sources_file['sources'] = [source if s['name'] == source['name'] else s for s in new_sources_file['sources']]
+    return new_sources_file
+
+
+def refactor_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: SchemaSourceFile) -> Tuple[
+    YamlFragment, Dict[str, DocsBlock]]:
     """Convert text column descriptions to dbt doc blocks
 
     Given a dbt source definition whose column descriptions are fully-rendered strings (i.e. without templating),
@@ -126,10 +145,11 @@ def refactor_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: Schem
     source_table_dfy = extract_source_table_yaml_fragment_from_file(file_of_source, source.source_name, source.name)
 
     text_blocks = {
-        c['name']: DocsBlock(DocsBlock.source_column_doc_name(source.source_name, source.name, c['name']), c['description'])
+        c['name']: DocsBlock(DocsBlock.source_column_doc_name(source.source_name, source.name, c['name']),
+                             c['description'])
         for c in source_table_dfy['columns']
         if not DocsBlock.contains_doc_ref(c['description'])
-        }
+    }
 
     new_source_table_dfy = deepcopy(source_table_dfy)
     for c in new_source_table_dfy['columns']:

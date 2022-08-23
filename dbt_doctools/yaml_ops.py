@@ -47,6 +47,6 @@ def ordered_fragment(yaml:Union[List[Any], Dict[str, Any], Any], sort_items:Call
     if isinstance(yaml, list):
         return [ordered_fragment(y, sort_items) for y in yaml]
     elif isinstance(yaml, dict):
-        return OrderedDict([(k, ordered_fragment(v, sort_items)) for k,v in sorted(yaml.items())])
+        return OrderedDict([(k, ordered_fragment(v, sort_items)) for k,v in sorted(yaml.items(), key=sort_items)])
     else:
         return yaml

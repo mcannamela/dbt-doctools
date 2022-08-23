@@ -19,8 +19,9 @@ def dbt_sort_key(yaml_key: str):
 def overwrite_yaml_file(yaml_doc: YamlFragment, schema_file: SchemaSourceFile):
     path = schema_file.path.full_path
     logger.info(f"Overwriting yaml at {path}")
+    ordered_yaml_doc = ordered_fragment(yaml_doc, lambda k, v: dbt_sort_key(k))
     with open(path, 'w') as f:
-        dump(ordered_fragment(yaml_doc, lambda k, v: dbt_sort_key(k)), f, default_style='"')
+        dump(ordered_yaml_doc, f)
 
 
 def create_or_append_companion_markdown(text_blocks: Dict[str, DocsBlock], schema_file: SchemaSourceFile,

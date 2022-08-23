@@ -3,11 +3,16 @@ from typing import Dict
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
 from loguru import logger
-from oyaml import dump
+import oyaml as yaml
 
-from dbt_doctools.markdown_ops import DocsBlock
+
+from dbt_doctools.markdown_ops import DocsBlock, DocRef, represent_rendered_docref
 from dbt_doctools.source_ops import maybe_extract_companion_markdown_file
 from dbt_doctools.yaml_ops import YamlFragment, ordered_fragment, apply_to_leaves
+
+
+yaml.add_representer(DocRef, DocRef.represent_as_yaml)
+yaml.add_representer(str, represent_rendered_docref)
 
 
 def dbt_sort_key(yaml_key: str):
@@ -23,7 +28,7 @@ def overwrite_yaml_file(yaml_doc: YamlFragment, schema_file: SchemaSourceFile):
     ordered_yaml_doc = ordered_fragment(clean_yaml_doc, lambda t: dbt_sort_key(t[0]))
 
     with open(path, 'w') as f:
-        dump(ordered_yaml_doc, f)
+        yaml.dump(ordered_yaml_doc, f)
 
 
 def create_or_append_companion_markdown(text_blocks: Dict[str, DocsBlock], schema_file: SchemaSourceFile,

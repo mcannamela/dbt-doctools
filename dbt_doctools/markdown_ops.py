@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
+from typing import Optional
+import oyaml as yaml
 
 @dataclass(frozen=True)
 class DocsBlock:
@@ -23,8 +25,7 @@ class DocsBlock:
         return cls.doc_ref_regex().match(content) is not None
 
     def doc_ref(self, comment=None):
-        c = '' if comment is None else f' # {comment}'
-        return f"{{{{ doc('{self.name}'){c} }}}}"
+        return DocRef(self.name, comment)
 
     @property
     def rendered(self):
@@ -33,3 +34,24 @@ class DocsBlock:
     @property
     def is_already_docs_block(self)->bool:
         return self.contains_doc_ref(self.content)
+
+
+@dataclass()
+class DocRef:
+    name: str
+    comment: Optional[str] = field(default='')
+
+    def __str__(self):
+        c = '' if self.comment is None else f' # {self.comment}'
+        return f"{{{{ doc('{self.name}'){c} }}}}"
+
+    @classmethod
+    def represent_as_yaml(cls,dumper, instance):
+        return dumper.represent_scalar('tag:yaml.org,2002:str', str(instance), style='"')
+
+
+def represent_rendered_docref(dumper: yaml.Dumper, instance: str):
+    if DocsBlock.contains_doc_ref(instance):
+        return dumper.represent_scalar('tag:yaml.org,2002:str', instance, style='"')
+    else:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', instance)

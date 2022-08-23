@@ -24,8 +24,7 @@ def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str 
 
     new_source_table_dfy, text_blocks = refactor_to_doc_blocks(source, file_of_source)
 
-    markdown_content = '\n\n'.join([b.rendered for b in text_blocks.values()])
-    logger.debug(f'extracted docs blocks: \n{markdown_content}')
+
 
     new_source_dfy = replace_source_table_yaml_fragment(source_dfy, new_source_table_dfy)
     logger.debug(f'refactored source: \n{new_source_dfy}')
@@ -33,7 +32,7 @@ def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str 
     new_source_file_dfy = replace_source_yaml_fragment(file_of_source.dict_from_yaml, new_source_dfy)
 
     overwrite_yaml_file(new_source_file_dfy, file_of_source)
-    create_or_append_companion_markdown(markdown_content, file_of_source, manifest)
+    create_or_append_companion_markdown(text_blocks, file_of_source, manifest)
 
 
 @app.command()

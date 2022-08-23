@@ -57,6 +57,7 @@ def maybe_extract_companion_markdown_file(manifest:Manifest, file:SchemaSourceFi
         if path == f.path.full_path:
             return f
 
+
 def extract_source_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str) -> YamlFragment:
     """Return the Python representation of the yaml fragment that defines the passed dbt source
 
@@ -162,6 +163,7 @@ def refactor_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: Schem
         nm = c['name']
         if nm in text_blocks:
             c['description'] = text_blocks[nm].doc_ref()
+
 
     return new_source_table_dfy, text_blocks
 

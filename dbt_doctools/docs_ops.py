@@ -38,10 +38,10 @@ def consolidate_duplicate_docs_blocks_(manifest:Manifest, graph:Graph, config:Ru
     node_set = {n for n in g if g.in_degree(n)==0}
     depth = 0
     while node_set:
-        for r in node_set:
-            for b in itertools.chain(source_to_blocks.get(r, []), ref_to_blocks.get(r, [])):
+        for n in node_set:
+            for b in itertools.chain(source_to_blocks.get(n, []), ref_to_blocks.get(n, [])):
                 doc_depth[b] = depth
-        node_set = {g.successors(n) for n in node_set}
+        node_set = set(itertools.chain(*[g.successors(n) for n in node_set]))
         depth += 1
 
     return doc_depth

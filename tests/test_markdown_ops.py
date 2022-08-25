@@ -39,4 +39,4 @@ def test_contains_doc_ref(content, contains_doc_ref):
                       ("{{doc('ref_1')}}{{doc('ref_1')}}", ['ref_1', 'ref_1']),
                   ])
 def test_referenced_doc_names(content, exp_doc_names):
-    assert DocsBlock.referenced_doc_names(content) == exp_doc_names
+    assert DocsBlock.referenced_doc_names(content) == set(exp_doc_names)

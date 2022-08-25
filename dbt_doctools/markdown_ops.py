@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import re
-from typing import Optional, List
+from typing import Optional, List, Set
 import oyaml as yaml
 
 @dataclass(frozen=True)
@@ -23,9 +23,9 @@ class DocsBlock:
         return cls.DOC_REF_REGEX.search(content) is not None
 
     @classmethod
-    def referenced_doc_names(cls, content:str)->List[str]:
+    def referenced_doc_names(cls, content:str)->Set[str]:
         matches = cls.DOC_REF_REGEX.findall(content)
-        return [t[1] for t in matches]
+        return {t[1] for t in matches}
 
     def doc_ref(self, comment=None):
         return DocRef(self.name, comment)

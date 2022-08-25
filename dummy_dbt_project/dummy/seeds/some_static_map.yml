@@ -14,4 +14,4 @@ seeds:
         description: Key for the map
 
       - name: value
-        description: Value for the map
+        description: ' {{ doc ( "static_map_value" ) }} '

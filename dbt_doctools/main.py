@@ -4,38 +4,98 @@ import typer
 from loguru import logger
 
 from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
-from dbt_doctools.source_ops import extract_source, extract_column_descriptions_to_doc_blocks, extract_source_yaml_fragment_from_file, \
-    replace_source_table_yaml_fragment, \
-    replace_source_yaml_fragment
-from dbt_doctools.yaml_io import overwrite_yaml_file, create_or_append_companion_markdown
+from dbt_doctools.source_ops import refactor_source_to_docs_blocks, write_refactored_source_and_markdown
 
 app = typer.Typer()
 
 
 @app.command()
 def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str = None):
-    project_dir = str(Path.cwd()) if project_dir is None else project_dir
-    logger.info(f"Using project dir: {project_dir}")
-    manifest, _, config = obtain_manifest_and_graph_and_config(
-        dbt_command_args=['--project-dir', project_dir]
-    )
+    """Replace plain text column descriptions in a dbt source table with `doc` references
 
-    source, file_of_source = extract_source(manifest, config.project_name, source_name, table_name)
-    new_source_table_dfy, text_blocks = extract_column_descriptions_to_doc_blocks(source, file_of_source)
+    For the given source and table, find all column descriptions that do not already contain a `doc` reference, make a
+    new `docs` block named "[source_name]__[table_name]__[column_name]__doc" and re-write the source table's yaml
+    file with the column descriptions replaced by references to the new docs blocks.
 
-    source_dfy = extract_source_yaml_fragment_from_file(file_of_source, source_name)
-    new_source_dfy = replace_source_table_yaml_fragment(source_dfy, new_source_table_dfy)
-    logger.debug(f'refactored source: \n{new_source_dfy}')
+    The new docs blocks are written to a markdown file with the same name as the source's yaml file, placed in the same
+    directory as the yaml file. If the markdown file already contains a docs block of the same name it will not be
+    overwritten.
 
-    new_source_file_dfy = replace_source_yaml_fragment(file_of_source.dict_from_yaml, new_source_dfy)
+    Example:
 
-    overwrite_yaml_file(new_source_file_dfy, file_of_source)
-    create_or_append_companion_markdown(text_blocks, file_of_source, manifest)
+    ```yaml
+    sources:
+      - name: my_source
+        tables:
+          - name: my_table
+            columns:
+              - name: my_column
+                description: This is a column
+    ```
+    would become:
+
+    ```yaml
+    sources:
+      - name: my_source
+        tables:
+          - name: my_table
+            columns:
+              - name: my_column
+                description: "{{ doc('my_source__my_table__my_column__doc')"
+    ```
+    and the docs block would be added to an adjacent markdown file:
+    ```markdown
+    {% docs my_source__my_table__my_column__doc %}
+    This is a column
+    {% enddocs %}
+    ```
+
+    Args:
+        source_name: Name of the target dbt source
+        table_name: Name of a the table within source `source_name` whose column descriptions should be refactored to
+            docs blocks.
+        project_dir: Path to the target dbt project
+
+    Returns:
+
+    """
+    config, _, manifest = _get_manifest_and_graph_and_config(project_dir)
+
+    file_of_source, manifest, new_source_file_dfy, text_blocks = refactor_source_to_docs_blocks(config, manifest,
+                                                                                                source_name, table_name)
+    write_refactored_source_and_markdown(file_of_source, manifest, new_source_file_dfy, text_blocks)
+
+
+@app.command()
+def consolidate_duplicate_docs_blocks(project_dir: str = None):
+    """Combine docs blocks that have identical non-empty content into a single block
+
+    Empty docs blocks i.e. stubs waiting to be filled in are ignored. Blocks referenced at the roots of the DAG are
+    preferred to those downstream.
+
+    Args:
+        project_dir: Path to the target dbt project
+
+    Returns:
+
+    """
+    config, graph, manifest = _get_manifest_and_graph_and_config(project_dir)
+
+    pass
 
 
 @app.command()
 def propagate_column_descriptions(project_dir: str = None):
     raise NotImplementedError()
+
+
+def _get_manifest_and_graph_and_config(project_dir):
+    project_dir = str(Path.cwd()) if project_dir is None else project_dir
+    logger.info(f"Using project dir: {project_dir}")
+    manifest, graph, config = obtain_manifest_and_graph_and_config(
+        dbt_command_args=['--project-dir', project_dir]
+    )
+    return config, graph, manifest
 
 
 if __name__ == "__main__":

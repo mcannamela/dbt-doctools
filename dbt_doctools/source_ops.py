@@ -4,13 +4,19 @@ from dbt.config import RuntimeConfig
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedSourceDefinition
+from loguru import logger
 
 from dbt_doctools.markdown_ops import DocsBlock
+from dbt_doctools.yaml_io import overwrite_yaml_file, create_or_append_companion_markdown
 from dbt_doctools.yaml_ops import unsafe_get_matching_singleton_by_key, YamlFragment
 from copy import deepcopy
 
+from dbt.config import read_user_config, RuntimeConfig
 
-def extract_source(m: Manifest, project_name, source_name: str, table_name: str) -> Tuple[
+from dbt.graph import Graph
+
+
+def extract_source(m: Manifest, project_name: str, source_name: str, table_name: str) -> Tuple[
     ParsedSourceDefinition, SchemaSourceFile]:
     """Extract the dbt source definition and schema file in which it resides from a whole Manifest
 
@@ -40,7 +46,7 @@ def extract_source(m: Manifest, project_name, source_name: str, table_name: str)
             f"Nothing found for source '{source_name}' table '{table_name}' in project '{project_name}'")
 
 
-def maybe_extract_companion_markdown_file(manifest:Manifest, file:SchemaSourceFile):
+def maybe_extract_companion_markdown_file(manifest: Manifest, file: SchemaSourceFile):
     path = file.path.full_path.replace('.yaml', '.md').replace('.yml', '.md')
     for f in manifest.files.values():
         if path == f.path.full_path:
@@ -120,7 +126,8 @@ def replace_source_yaml_fragment(sources_file: YamlFragment, source: YamlFragmen
     return new_sources_file
 
 
-def extract_column_descriptions_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: SchemaSourceFile) -> Tuple[
+def extract_column_descriptions_to_doc_blocks(source: ParsedSourceDefinition, file_of_source: SchemaSourceFile) -> \
+Tuple[
     YamlFragment, Dict[str, DocsBlock]]:
     """Convert text column descriptions to dbt doc blocks
 
@@ -164,3 +171,19 @@ def refactor_to_one_file_per_table(file_of_source: SchemaSourceFile, source_name
             version=file_of_source.dict_from_yaml['version'],
             sources=[dict(**source_header, **dict(tables=table_yaml))]
         )
+
+
+def refactor_source_to_docs_blocks(config: RuntimeConfig, manifest: Manifest, source_name: str, table_name: str):
+    source, file_of_source = extract_source(manifest, config.project_name, source_name, table_name)
+    new_source_table_dfy, text_blocks = extract_column_descriptions_to_doc_blocks(source, file_of_source)
+    source_dfy = extract_source_yaml_fragment_from_file(file_of_source, source_name)
+    new_source_dfy = replace_source_table_yaml_fragment(source_dfy, new_source_table_dfy)
+    logger.debug(f'refactored source: \n{new_source_dfy}')
+    new_source_file_dfy = replace_source_yaml_fragment(file_of_source.dict_from_yaml, new_source_dfy)
+    return file_of_source, manifest, new_source_file_dfy, text_blocks
+
+
+def write_refactored_source_and_markdown(file_of_source: SchemaSourceFile, manifest: Manifest,
+                                         new_source_file_dfy: YamlFragment, text_blocks: Dict[str, DocsBlock]):
+    overwrite_yaml_file(new_source_file_dfy, file_of_source)
+    create_or_append_companion_markdown(text_blocks, file_of_source, manifest)

@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
 import re
-from typing import Optional
+from typing import Optional, List
 import oyaml as yaml
 
 @dataclass(frozen=True)
 class DocsBlock:
     name:str
     content:str
+
+    DOC_REF_REGEX = re.compile(r'{{\s*doc\s*\(\s*([\'\"])(?P<doc_name>[a-zA-Z0-9_]+)\1\s*\)\s*}}')
 
     @classmethod
     def source_column_doc_name(cls, source_name, table_name, column_name):
@@ -17,12 +19,13 @@ class DocsBlock:
         return '__'.join([model_name, column_name, 'doc'])
 
     @classmethod
-    def doc_ref_regex(cls):
-        return re.compile(r'{{\s*doc\s*\(\s*([\'\"])[a-zA-Z0-9_]+\s*\1\)\s*}}')
+    def contains_doc_ref(cls, content:str):
+        return cls.DOC_REF_REGEX.search(content) is not None
 
     @classmethod
-    def contains_doc_ref(cls, content:str):
-        return cls.doc_ref_regex().match(content) is not None
+    def referenced_doc_names(cls, content:str)->List[str]:
+        matches = cls.DOC_REF_REGEX.findall(content)
+        return [t[1] for t in matches]
 
     def doc_ref(self, comment=None):
         return DocRef(self.name, comment)

@@ -11,7 +11,7 @@ models:
           - unique
           - not_null
       - name: old_value
-        description: "Value of the record"
+        description: "{{doc('zero_layer__old_value')}}"
 
   - name: old_one_layer
     description: "A starter dbt model"
@@ -22,4 +22,4 @@ models:
           - unique
           - not_null
       - name: old_value
-        description: "{{doc('old_value')}}"
+        description: "{{doc('one_layer__old_value')}}"

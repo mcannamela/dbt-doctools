@@ -1,19 +1,17 @@
-import functools
 import itertools
-import operator
-from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping, Set
+from collections import defaultdict
+from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping
 
-from dbt.config import read_user_config, RuntimeConfig
+from dbt.config import RuntimeConfig
 from dbt.contracts.files import SchemaSourceFile, AnySourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.graph import Graph
-from networkx import DiGraph
-from collections import defaultdict
 
+from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
+    source_id_and_column_extractor, iter_node_or_sources_files, IdSetMap
 from dbt_doctools.markdown_ops import DocsBlock
 
-IdSetMap = Dict[str, Set[str]]
 
 def is_non_empty(doc: ParsedDocumentation):
     return len(doc.block_contents.strip()) > 0
@@ -38,8 +36,11 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
 
     doc_file_to_docs, doc_files_to_rewrite = _construct_docs_to_rewrite(duplicate_docs_to_remove, manifest)
 
-    block_id_to_model_ids, model_id_to_block_ids, block_id_to_file_ids = build_docs_block_to_ref_map(manifest, config.project_name)
-    block_id_to_source_ids, source_id_to_block_ids, block_id_to_file_ids = build_docs_block_to_source_map(manifest, config.project_name)
+    block_id_to_model_ids, ref_id_to_block_ids, block_id_to_file_ids = build_docs_block_to_ref_map(
+        ref_id_and_column_extractor(manifest, config.project_name),
+        source_id_and_column_extractor(manifest, config.project_name),
+        iter_node_or_sources_files(manifest)
+    )
 
     return doc_files_to_rewrite, doc_file_to_docs
 
@@ -57,11 +58,14 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
 
 
 def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
-    _, ref_to_docs, _ = build_docs_block_to_ref_map(manifest, config.project_name)
-    _, source_to_docs, _ = build_docs_block_to_source_map(manifest, config.project_name)
+    _, ref_id_to_block_ids, _ = build_docs_block_to_ref_map(
+        ref_id_and_column_extractor(manifest, config.project_name),
+        source_id_and_column_extractor(manifest, config.project_name),
+        iter_node_or_sources_files(manifest)
+    )
 
     def get_blocks_iter(n):
-        return itertools.chain(source_to_docs.get(n, []), ref_to_docs.get(n, []))
+        return ref_id_to_block_ids.get(n, [])
 
     doc_depth = compute_doc_depth(graph.graph, get_blocks_iter)
 
@@ -83,43 +87,3 @@ def compute_doc_depth(g, get_blocks_iter: Callable[[str], Iterable[str]]):
         node_set = set(itertools.chain(*[g.successors(n) for n in node_set]))
         depth += 1
     return doc_depth
-
-
-def build_docs_block_to_ref_map(manifest:Manifest, project_name: str) -> Tuple[IdSetMap, IdSetMap, IdSetMap]:
-    block_id_to_model_ids = defaultdict(set)
-    model_id_to_block_ids = defaultdict(set)
-    block_id_to_file_ids = defaultdict(set)
-
-    for fid, f in manifest.files.items():
-        if isinstance(f, SchemaSourceFile) and f.node_patches:
-            for ref_dfy in itertools.chain(f.dict_from_yaml.get('models', []), f.dict_from_yaml.get('seeds', [])):
-                ref_id = manifest.ref_lookup.get_unique_id(ref_dfy['name'], project_name)
-                for column_dfy in ref_dfy.get('columns', []):
-                    referenced_block_names = DocsBlock.referenced_doc_names(column_dfy.get('description', ''))
-                    for b in referenced_block_names:
-                        block_id_to_model_ids[b].add(ref_id)
-                        model_id_to_block_ids[ref_id].add(b)
-                        block_id_to_file_ids[b].add(fid)
-
-    return block_id_to_model_ids, model_id_to_block_ids, block_id_to_file_ids
-
-
-def build_docs_block_to_source_map(manifest, project_name: str) -> Tuple[IdSetMap, IdSetMap, IdSetMap]:
-    block_id_to_source_ids = defaultdict(set)
-    source_id_to_block_ids = defaultdict(set)
-    block_id_to_file_ids = defaultdict(set)
-
-    for fid, f in manifest.files.items():
-        if isinstance(f, SchemaSourceFile) and f.sources:
-            for source_dfy in f.dict_from_yaml['sources']:
-                for table_dfy in source_dfy.get('tables', []):
-                    source_id = manifest.resolve_source(source_dfy['name'], table_dfy['name'], project_name,
-                                                        None).unique_id
-                    for column_dfy in table_dfy.get('columns', []):
-                        referenced_block_names = DocsBlock.referenced_doc_names(column_dfy.get('description', ''))
-                        for b in referenced_block_names:
-                            block_id_to_source_ids[b].add(source_id)
-                            source_id_to_block_ids[source_id].add(b)
-                            block_id_to_file_ids[b].add(fid)
-
-    return block_id_to_source_ids, source_id_to_block_ids, block_id_to_file_ids

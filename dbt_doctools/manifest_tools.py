@@ -17,7 +17,7 @@ def build_docs_block_to_ref_map(
         node_or_sources_files_iter: Iterable[SchemaSourceFile]
 ) -> Tuple[IdSetMap, IdSetMap, IdSetMap]:
     block_id_to_model_ids = defaultdict(set)
-    model_id_to_block_ids = defaultdict(set)
+    ref_id_to_block_ids = defaultdict(set)
     block_id_to_file_ids = defaultdict(set)
 
     for fid, f in node_or_sources_files_iter:
@@ -32,10 +32,10 @@ def build_docs_block_to_ref_map(
                 referenced_block_names = DocsBlock.referenced_doc_names(column_dfy.get('description', ''))
                 for b in referenced_block_names:
                     block_id_to_model_ids[b].add(ref_or_source_id)
-                    model_id_to_block_ids[ref_or_source_id].add(b)
+                    ref_id_to_block_ids[ref_or_source_id].add(b)
                     block_id_to_file_ids[b].add(fid)
 
-    return block_id_to_model_ids, model_id_to_block_ids, block_id_to_file_ids
+    return block_id_to_model_ids, ref_id_to_block_ids, block_id_to_file_ids
 
 
 def ref_id_and_column_extractor(manifest:Manifest, project_name:str)->Callable[[YamlMap], Tuple[str, YamlList]]:

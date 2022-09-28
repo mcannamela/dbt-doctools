@@ -5,8 +5,10 @@ T = TypeVar('T')
 U = TypeVar('U')
 V = TypeVar('V')
 
-YamlFragment = Dict[str, Any]
 
+YamlFragment = Union[str, Dict[str, Any]]
+YamlMap = Dict[str, YamlFragment]
+YamlList = List[YamlFragment]
 
 class DegenerateMatches(LookupError):
     pass

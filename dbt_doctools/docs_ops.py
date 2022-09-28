@@ -7,6 +7,7 @@ from dbt.contracts.files import SchemaSourceFile, AnySourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.graph import Graph
+from networkx import DiGraph
 
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
     source_id_and_column_extractor, iter_node_or_sources_files, IdSetMap
@@ -67,7 +68,8 @@ def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     def get_blocks_iter(n):
         return ref_id_to_block_ids.get(n, [])
 
-    doc_depth = compute_doc_depth(graph.graph, get_blocks_iter)
+    g:DiGraph = graph.graph
+    doc_depth = compute_doc_depth(g, get_blocks_iter)
 
     def sort_key(doc_name):
         return (doc_depth.get(doc_name, 2 ** 31), doc_name)
@@ -75,7 +77,7 @@ def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     return sort_key
 
 
-def compute_doc_depth(g, get_blocks_iter: Callable[[str], Iterable[str]]):
+def compute_doc_depth(g:DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]):
     doc_depth = {}
 
     node_set = {n for n in g if g.in_degree(n) == 0}

@@ -15,6 +15,7 @@ from dbt_doctools.markdown_ops import DocsBlock
 
 
 def is_non_empty(doc: ParsedDocumentation):
+    """True if a doc block contains non-whitespace characters"""
     return len(doc.block_contents.strip()) > 0
 
 
@@ -58,7 +59,9 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
     return doc_file_to_docs, doc_files_to_rewrite
 
 
-def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
+def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig) -> Callable[[str], Tuple[int, str]]:
+    """Build a function that provides a sort key for doc block ids to sort them in order of appearance in the dbt dag
+    """
     _, ref_id_to_block_ids, _ = build_docs_block_to_ref_map(
         ref_id_and_column_extractor(manifest, config.project_name),
         source_id_and_column_extractor(manifest, config.project_name),
@@ -68,16 +71,16 @@ def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     def get_blocks_iter(n):
         return ref_id_to_block_ids.get(n, [])
 
-    g:DiGraph = graph.graph
+    g: DiGraph = graph.graph
     doc_depth = compute_min_doc_depth(g, get_blocks_iter)
 
-    def sort_key(doc_name):
-        return (doc_depth.get(doc_name, 2 ** 31), doc_name)
+    def sort_key(doc_name: str) -> Tuple[int, str]:
+        return doc_depth.get(doc_name, 2 ** 31), doc_name
 
     return sort_key
 
 
-def compute_min_doc_depth(g:DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]):
+def compute_min_doc_depth(g: DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]) -> Dict[str, int]:
     """Find the depth in the dbt graph from the source layer where doc blocks are first used
 
     Args:
@@ -91,7 +94,7 @@ def compute_min_doc_depth(g:DiGraph, get_blocks_iter: Callable[[str], Iterable[s
     doc_depth = {}
 
     node_set = {n for n in g if g.in_degree(n) == 0}
-    depth = 0
+    depth: int = 0
     while node_set:
         for n in node_set:
             for b in get_blocks_iter(n):

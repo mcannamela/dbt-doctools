@@ -1,13 +1,13 @@
 from networkx import DiGraph
 
-from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, compute_doc_depth
+from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, compute_min_doc_depth
 
 
 def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):
     consolidate_duplicate_docs_blocks_(manifest, graph, config)
 
 
-def test_compute_doc_depth():
+def test_compute_min_doc_depth():
     g = DiGraph()
     edges = [
         ('a', 'b1'),
@@ -47,6 +47,6 @@ def test_compute_doc_depth():
 
     g.add_edges_from(edges)
 
-    block_depth = compute_doc_depth(g, get_blocks_iter)
+    block_depth = compute_min_doc_depth(g, get_blocks_iter)
 
     assert block_depth == exp_block_depth

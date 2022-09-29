@@ -69,7 +69,7 @@ def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
         return ref_id_to_block_ids.get(n, [])
 
     g:DiGraph = graph.graph
-    doc_depth = compute_doc_depth(g, get_blocks_iter)
+    doc_depth = compute_min_doc_depth(g, get_blocks_iter)
 
     def sort_key(doc_name):
         return (doc_depth.get(doc_name, 2 ** 31), doc_name)
@@ -77,7 +77,17 @@ def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     return sort_key
 
 
-def compute_doc_depth(g:DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]):
+def compute_min_doc_depth(g:DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]):
+    """Find the depth in the dbt graph from the source layer where doc blocks are first used
+
+    Args:
+        g: A graph whose nodes are identifiers of dbt models, seeds, or sources
+        get_blocks_iter: a function taking a node id and returning the ids of doc blocks that appear in that node's
+            documenting yaml
+
+    Returns:
+        A dictionary from doc block id to the depth from the source layer where the block first appears
+    """
     doc_depth = {}
 
     node_set = {n for n in g if g.in_degree(n) == 0}

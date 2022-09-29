@@ -85,7 +85,8 @@ def compute_doc_depth(g:DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]
     while node_set:
         for n in node_set:
             for b in get_blocks_iter(n):
-                doc_depth[b] = depth
+                if b not in doc_depth:
+                    doc_depth[b] = depth
         node_set = set(itertools.chain(*[g.successors(n) for n in node_set]))
         depth += 1
     return doc_depth

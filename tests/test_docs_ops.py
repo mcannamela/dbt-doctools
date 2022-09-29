@@ -17,6 +17,7 @@ def test_compute_doc_depth():
         ('b2', 'd1'),
         ('b2', 'c2'),
         ('c2', 'd2'),
+        ('d2', 'e')
 
     ]
 
@@ -28,6 +29,8 @@ def test_compute_doc_depth():
         'c2':[],
         'd1':['kd1'],
         'd2':['kd2', 'kc'],
+        'e':['ke'],
+
     }
 
     def get_blocks_iter(n):
@@ -39,6 +42,7 @@ def test_compute_doc_depth():
         'kc': 2,
         'kd1': 2,
         'kd2': 3,
+        'ke': 4
     }
 
     g.add_edges_from(edges)

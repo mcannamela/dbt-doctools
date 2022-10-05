@@ -20,19 +20,8 @@ def is_non_empty(doc: ParsedDocumentation):
 
 
 def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
-    sort_key = make_doc_sort_fun(manifest, graph, config)
 
-    non_empty_docs = {k: d for k, d in manifest.docs.items() if is_non_empty(d)}
-    block_content_to_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
-    for d in non_empty_docs.values():
-        block_content_to_docs[d.block_contents.strip()].append(d)
-
-    degenerate_docs: List[List[ParsedDocumentation]] = [
-        list(sorted(v, key=lambda d: sort_key(d.unique_id)))[1:]
-        for v in block_content_to_docs.values() if len(v) > 1
-    ]
-
-    consolidated_docs_and_duplicates = [(x[0], x[1:]) for x in degenerate_docs]
+    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(config, graph, manifest)
 
     duplicate_docs_to_remove: List[ParsedDocumentation] = sum([t[1] for t in consolidated_docs_and_duplicates], [])
 
@@ -47,13 +36,35 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
     return doc_files_to_rewrite, doc_file_to_docs
 
 
+def find_consolidated_docs_and_duplicates(config, graph, manifest):
+    non_empty_docs = {k: d for k, d in manifest.docs.items() if is_non_empty(d)}
+    degenerate_docs = find_degenerate_docs(non_empty_docs)
+    sort_key = make_doc_sort_fun(manifest, graph, config)
+
+    def split_degenerates(x: List[ParsedDocumentation]) -> Tuple[ParsedDocumentation, List[ParsedDocumentation]]:
+        y = list(sorted(x, key=lambda d: sort_key(d.name)))
+        return y[0], y[1:]
+
+    consolidated_docs_and_duplicates = [split_degenerates(x) for x in degenerate_docs]
+    return consolidated_docs_and_duplicates
+
+
+def find_degenerate_docs(non_empty_docs):
+    block_content_to_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
+    for d in non_empty_docs.values():
+        block_content_to_docs[d.block_contents.strip()].append(d)
+    degenerate_docs: List[List[ParsedDocumentation]] = [v for v in block_content_to_docs.values() if len(v) > 1]
+    return degenerate_docs
+
+
 def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentation], manifest: Manifest) -> Tuple[
     MutableMapping[str, List[ParsedDocumentation]], Dict[str, AnySourceFile]]:
     doc_files_to_rewrite: Dict[str, AnySourceFile] = {d.file_id: manifest.files[d.file_id] for d in
                                                       duplicate_docs_to_remove}
     duplicate_doc_ids = {d.unique_id for d in duplicate_docs_to_remove}
     doc_file_to_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
-    for d in manifest.docs.values():
+    parsed_docs = manifest.docs.values()
+    for d in parsed_docs:
         if d.file_id in doc_files_to_rewrite and d.unique_id not in duplicate_doc_ids:
             doc_file_to_docs[d.file_id].append(d)
     return doc_file_to_docs, doc_files_to_rewrite

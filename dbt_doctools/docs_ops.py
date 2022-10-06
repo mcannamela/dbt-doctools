@@ -21,7 +21,7 @@ def is_non_empty(doc: ParsedDocumentation):
 
 def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
 
-    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(config, graph, manifest)
+    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(manifest, graph, config)
 
     duplicate_docs_to_remove: List[ParsedDocumentation] = sum([t[1] for t in consolidated_docs_and_duplicates], [])
 
@@ -36,7 +36,7 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
     return doc_files_to_rewrite, doc_file_to_docs
 
 
-def find_consolidated_docs_and_duplicates(config, graph, manifest):
+def find_consolidated_docs_and_duplicates(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     non_empty_docs = {k: d for k, d in manifest.docs.items() if is_non_empty(d)}
     degenerate_docs = find_degenerate_docs(non_empty_docs)
     sort_key = make_doc_sort_fun(manifest, graph, config)

@@ -1,14 +1,17 @@
 from dataclasses import dataclass, field
 import re
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Tuple
 import oyaml as yaml
+
 
 @dataclass(frozen=True)
 class DocsBlock:
-    name:str
-    content:str
+    name: str
+    content: str
 
-    DOC_REF_REGEX = re.compile(r'{{\s*doc\s*\(\s*([\'\"])(?P<doc_name>[a-zA-Z0-9_]+)\1\s*\)\s*}}')
+    DOC_REF_REGEX = re.compile(
+        r'{{\s*doc\s*\(\s*([\'\"])((?P<project_name>[a-zA-Z0-9_]+)\.)?(?P<doc_name>[a-zA-Z0-9_]+)\1\s*\)\s*}}'
+    )
 
     @classmethod
     def source_column_doc_name(cls, source_name, table_name, column_name):
@@ -19,13 +22,17 @@ class DocsBlock:
         return '__'.join([model_name, column_name, 'doc'])
 
     @classmethod
-    def contains_doc_ref(cls, content:str):
+    def contains_doc_ref(cls, content: str):
         return cls.DOC_REF_REGEX.search(content) is not None
 
     @classmethod
-    def referenced_doc_names(cls, content:str)->Set[str]:
-        matches = cls.DOC_REF_REGEX.findall(content)
-        return {t[1] for t in matches}
+    def referenced_doc_names(cls, content: str) -> Set[Tuple[Optional[str], str]]:
+        matches = cls.DOC_REF_REGEX.finditer(content)
+        return {(m.groupdict()['project_name'], m.groupdict()['doc_name']) for m in matches}
+
+    @classmethod
+    def id(cls, project_name: str, block_name: str):
+        return f'{project_name}.{block_name}'
 
     def doc_ref(self, comment=None):
         return DocRef(self.name, comment)
@@ -35,7 +42,7 @@ class DocsBlock:
         return f"{{% docs {self.name} %}}\n{self.content}\n{{% enddocs %}}"
 
     @property
-    def is_already_docs_block(self)->bool:
+    def is_already_docs_block(self) -> bool:
         return self.contains_doc_ref(self.content)
 
 
@@ -49,7 +56,7 @@ class DocRef:
         return f"{{{{ doc('{self.name}'){c} }}}}"
 
     @classmethod
-    def represent_as_yaml(cls,dumper, instance):
+    def represent_as_yaml(cls, dumper, instance):
         return dumper.represent_scalar('tag:yaml.org,2002:str', str(instance), style='"')
 
 

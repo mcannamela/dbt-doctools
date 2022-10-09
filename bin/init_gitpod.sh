@@ -8,5 +8,7 @@ apt-get update
 apt-get install -y postgresql
 curl --retry 5 -sSL https://install.python-poetry.org | python3 - --preview
 
-poetry config virtualenvs.create false
-poetry config installer.parallel false
+pyenv install 3.9.14
+pyenv local 3.9.14
+
+poetry install

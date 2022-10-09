@@ -1,7 +1,7 @@
 # List the start up tasks. Learn more https://www.gitpod.io/docs/config-start-tasks/
 tasks:
-  - init: docker build -t dbt-doctools ./docker/Dockerfile .
-    command: docker-compose up
+  - init: sudo ./bin/init_gitpod.sh
+    command: docker-compose up db
 
 # List the ports to expose. Learn more https://www.gitpod.io/docs/config-ports/
 ports:

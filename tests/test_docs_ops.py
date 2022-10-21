@@ -17,7 +17,7 @@ def test_find_consolidated_docs_and_duplicates(config, graph, manifest):
 
     doc_id_to_dupe_ids = {t[0].unique_id: [u.unique_id for u in t[1]] for t in consolidated_docs_and_duplicates}
     project = config.project_name
-    doc_id_to_dupe_ids[f'{project}.zero_layer__old_value'][0] == [f'{project}.one_layer__old_value']
+    assert doc_id_to_dupe_ids[f'{project}.zero_layer__old_value'] == [f'{project}.one_layer__old_value']
 
 
 def test_is_non_empty():

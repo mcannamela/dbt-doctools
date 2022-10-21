@@ -42,7 +42,7 @@ def find_consolidated_docs_and_duplicates(manifest: Manifest, graph: Graph, conf
     sort_key = make_doc_sort_fun(manifest, graph, config)
 
     def split_degenerates(x: List[ParsedDocumentation]) -> Tuple[ParsedDocumentation, List[ParsedDocumentation]]:
-        y = list(sorted(x, key=lambda d: sort_key(d.name)))
+        y = list(sorted(x, key=lambda d: sort_key(d.unique_id)))
         return y[0], y[1:]
 
     consolidated_docs_and_duplicates = [split_degenerates(x) for x in degenerate_docs]

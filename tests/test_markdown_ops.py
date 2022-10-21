@@ -4,7 +4,8 @@ from dbt.config import Project
 from dbt.parser import DocumentationParser
 from pytest import mark
 
-from dbt_doctools.markdown_ops import DocsBlock
+from dbt_doctools.markdown_ops import DocsBlock, DocRef
+
 
 @dataclass
 class FakeProject:
@@ -58,3 +59,24 @@ def test_contains_doc_ref(content, contains_doc_ref):
                   ])
 def test_referenced_doc_names(content, exp_doc_names):
     assert DocsBlock.referenced_doc_names(content) == set(exp_doc_names)
+    if exp_doc_names:
+        for project_name, doc_name in exp_doc_names:
+            assert DocsBlock.regex_for(doc_name, project_name=project_name).search(content) is not None
+
+
+@mark.parametrize(('project_name', 'doc_name', 'comment'),
+                  [
+                      (None, 'ref_name_123', None),
+                      (None, 'ref_name', ''),
+                      (None, 'ref_name', 'this is a comment'),
+                      ("project_name", 'ref_name', None),
+                      ("project_name", 'ref_name', r'23409858@(@#$&%(0!)(#*\\'),
+                  ])
+def test_regex_for_round_trips(project_name, doc_name, comment):
+    doc_ref = DocRef(doc_name, project_name=project_name, comment=comment)
+    rendered = str(doc_ref)
+    assert DocsBlock.contains_doc_ref(rendered)
+    names = DocsBlock.referenced_doc_names(rendered)
+    assert names == {(project_name, doc_name)}
+    assert doc_ref.re().search(rendered) is not None
+

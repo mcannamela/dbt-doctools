@@ -14,6 +14,17 @@ class DocsBlock:
     )
 
     @classmethod
+    def regex_for(cls, doc_name, project_name=None):
+        if project_name is not None:
+            nm = f'{project_name}.{doc_name}'
+        else:
+            nm = doc_name
+
+        return re.compile(
+            r'{{\s*doc\s*\(\s*([\'\"])'+ nm +r'\1\s*\)\s*}}'
+        )
+
+    @classmethod
     def source_column_doc_name(cls, source_name, table_name, column_name):
         return '__'.join([source_name, table_name, column_name, 'doc'])
 
@@ -58,10 +69,18 @@ class DocsBlock:
 class DocRef:
     name: str
     comment: Optional[str] = field(default='')
+    project_name: Optional[str] = field(default=None)
+
+    def re(self):
+        return DocsBlock.regex_for(self.name, self.project_name)
 
     def __str__(self):
         c = '' if self.comment is None else f' # {self.comment}'
-        return f"{{{{ doc('{self.name}'){c} }}}}"
+        if self.project_name is not None:
+            nm = f'{self.project_name}.{self.name}'
+        else:
+            nm = self.name
+        return f"{{{{ doc('{nm}') }}}} {c}"
 
     @classmethod
     def represent_as_yaml(cls, dumper, instance):

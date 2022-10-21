@@ -13,24 +13,24 @@ def test_build_docs_block_to_ref_map(manifest, config):
     )
 
     assert block_id_to_model_ids == {
-        'static_map_value': {'seed.dummy.some_static_map'},
-        'zero_layer__old_value': {'model.dummy.old_zero_layer'},
-        'one_layer__old_value': {'model.dummy.old_one_layer'},
-        'some_old_source__value': {'source.dummy.dummy_sources.some_old_source'}
+        'dummy.static_map_value': {'seed.dummy.some_static_map'},
+        'dummy.zero_layer__old_value': {'model.dummy.old_zero_layer'},
+        'dummy.one_layer__old_value': {'model.dummy.old_one_layer'},
+        'dummy.some_old_source__value': {'source.dummy.dummy_sources.some_old_source'}
     }
 
     assert model_id_to_block_ids == {
-        'seed.dummy.some_static_map': {'static_map_value'},
-        'model.dummy.old_zero_layer': {'zero_layer__old_value'},
-        'model.dummy.old_one_layer': {'one_layer__old_value'},
-        'source.dummy.dummy_sources.some_old_source': {'some_old_source__value'}
+        'seed.dummy.some_static_map': {'dummy.static_map_value'},
+        'model.dummy.old_zero_layer': {'dummy.zero_layer__old_value'},
+        'model.dummy.old_one_layer': {'dummy.one_layer__old_value'},
+        'source.dummy.dummy_sources.some_old_source': {'dummy.some_old_source__value'},
     }
 
     assert block_id_to_file_ids == {
-        'static_map_value': {'dummy://seeds/some_static_map.yml'},
-        'zero_layer__old_value': {'dummy://models/zero_layer/schema.yml'},
-        'one_layer__old_value': {'dummy://models/zero_layer/schema.yml'},
-        'some_old_source__value': {'dummy://models/sources/some_sources.yml'}
+        'dummy.static_map_value': {'dummy://seeds/some_static_map.yml'},
+        'dummy.zero_layer__old_value': {'dummy://models/zero_layer/schema.yml'},
+        'dummy.one_layer__old_value': {'dummy://models/zero_layer/schema.yml'},
+        'dummy.some_old_source__value': {'dummy://models/sources/some_sources.yml'}
     }
 
 

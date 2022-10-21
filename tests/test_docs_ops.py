@@ -11,7 +11,7 @@ def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):
 
 def test_find_consolidated_docs_and_duplicates(config, graph, manifest):
 
-    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(config, graph, manifest)
+    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(manifest, graph, config)
     for doc, dupes in consolidated_docs_and_duplicates:
         for d in dupes:
             assert doc.block_contents.strip() == d.block_contents.strip()

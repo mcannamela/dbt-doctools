@@ -29,11 +29,10 @@ def build_docs_block_to_ref_map(
         for dfy, extract_fun in ref_or_source_iter:
             ref_or_source_id, columns_iter = extract_fun(dfy)
             for column_dfy in columns_iter:
-                referenced_block_names = DocsBlock.referenced_doc_names(column_dfy.get('description', ''))
-                for b in referenced_block_names:
-                    block_id_to_model_ids[b].add(ref_or_source_id)
-                    ref_id_to_block_ids[ref_or_source_id].add(b)
-                    block_id_to_file_ids[b].add(fid)
+                for block_id in DocsBlock.iter_block_ids(DocsBlock.referenced_doc_names(column_dfy.get('description', '')), f.project_name):
+                    block_id_to_model_ids[block_id].add(ref_or_source_id)
+                    ref_id_to_block_ids[ref_or_source_id].add(block_id)
+                    block_id_to_file_ids[block_id].add(fid)
 
     return block_id_to_model_ids, ref_id_to_block_ids, block_id_to_file_ids
 
@@ -64,6 +63,7 @@ def iter_node_or_sources_files(manifest:Manifest)->Iterable[SchemaSourceFile]:
     for fid, f in iter_schema_source_files(manifest):
         if f.node_patches or f.sources:
             yield fid, f
+
 
 def iter_source_tables(f: SchemaSourceFile)->Iterable[Tuple[str, YamlMap]]:
     return itertools.chain(*(((s['name'], t) for t in s.get('tables', [])) for s in f.dict_from_yaml.get('sources', [])))

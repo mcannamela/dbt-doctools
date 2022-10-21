@@ -31,6 +31,14 @@ class DocsBlock:
         return {(m.groupdict()['project_name'], m.groupdict()['doc_name']) for m in matches}
 
     @classmethod
+    def iter_block_ids(cls, maybe_project_name_and_block_names:Set[Tuple[Optional[str], str]], project_name:str):
+        for maybe_project_name, block_name in maybe_project_name_and_block_names:
+            yield cls.id(
+                maybe_project_name if maybe_project_name is not None else project_name,
+                block_name
+            )
+
+    @classmethod
     def id(cls, project_name: str, block_name: str):
         return f'{project_name}.{block_name}'
 

@@ -59,15 +59,27 @@ def find_degenerate_docs(non_empty_docs):
 
 def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentation], manifest: Manifest) -> Tuple[
     MutableMapping[str, List[ParsedDocumentation]], Dict[str, AnySourceFile]]:
+    """Find all files affected by removal of duplicates and list the blocks that should remain after deduplication
+
+    Args:
+        duplicate_docs_to_remove: dbt doc blocks that are to be superceded by a block with identical contents
+        manifest: dbt Manifest for the project from which we will determine
+
+    Returns:
+        A tuple of:
+            1. a map from doc (i.e. markdown) file id to the doc blocks that should be left in the file after removing duplicates
+            2. a map from file id to dbt `SourceFile`s for those files that need to be rewritten
+s
+    """
     doc_files_to_rewrite: Dict[str, AnySourceFile] = {d.file_id: manifest.files[d.file_id] for d in
                                                       duplicate_docs_to_remove}
     duplicate_doc_ids = {d.unique_id for d in duplicate_docs_to_remove}
-    doc_file_to_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
+    doc_file_to_retained_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
     parsed_docs = manifest.docs.values()
     for d in parsed_docs:
         if d.file_id in doc_files_to_rewrite and d.unique_id not in duplicate_doc_ids:
-            doc_file_to_docs[d.file_id].append(d)
-    return doc_file_to_docs, doc_files_to_rewrite
+            doc_file_to_retained_docs[d.file_id].append(d)
+    return doc_file_to_retained_docs, doc_files_to_rewrite
 
 
 def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig) -> Callable[[str], Tuple[int, str]]:

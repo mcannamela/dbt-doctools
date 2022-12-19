@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import re
 from typing import Optional, List, Set, Tuple
 import oyaml as yaml
+from dbt.contracts.graph.parsed import ParsedDocumentation
 
 
 @dataclass(frozen=True)
@@ -13,6 +14,7 @@ class DocsBlock:
         r'{{\s*doc\s*\(\s*([\'\"])((?P<project_name>[a-zA-Z0-9_]+)\.)?(?P<doc_name>[a-zA-Z0-9_]+)\1\s*\)\s*}}'
     )
 
+
     @classmethod
     def regex_for(cls, doc_name, project_name=None):
         if project_name is not None:
@@ -23,6 +25,10 @@ class DocsBlock:
         return re.compile(
             r'{{\s*doc\s*\(\s*([\'\"])'+ nm +r'\1\s*\)\s*}}'
         )
+
+    @classmethod
+    def from_parsed_doc(cls, doc: ParsedDocumentation) -> 'DocsBlock':
+        return cls(name=doc.name, content=doc.block_contents)
 
     @classmethod
     def source_column_doc_name(cls, source_name, table_name, column_name):
@@ -71,6 +77,14 @@ class DocRef:
     comment: Optional[str] = field(default='')
     project_name: Optional[str] = field(default=None)
 
+    @classmethod
+    def represent_as_yaml(cls, dumper, instance):
+        return dumper.represent_scalar('tag:yaml.org,2002:str', str(instance), style='"')
+
+    @classmethod
+    def from_parsed_doc(cls, doc:ParsedDocumentation)->'DocRef':
+        return cls(name=doc.name)
+
     def re(self):
         return DocsBlock.regex_for(self.name, self.project_name)
 
@@ -81,10 +95,6 @@ class DocRef:
         else:
             nm = self.name
         return f"{{{{ doc('{nm}') }}}} {c}"
-
-    @classmethod
-    def represent_as_yaml(cls, dumper, instance):
-        return dumper.represent_scalar('tag:yaml.org,2002:str', str(instance), style='"')
 
 
 def represent_rendered_docref(dumper: yaml.Dumper, instance: str):

@@ -1,4 +1,5 @@
 import itertools
+import re
 from collections import defaultdict
 from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping
 
@@ -8,10 +9,11 @@ from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.graph import Graph
 from networkx import DiGraph
+from loguru import logger
 
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
     source_id_and_column_extractor, iter_node_or_sources_files, IdSetMap
-from dbt_doctools.markdown_ops import DocsBlock
+from dbt_doctools.markdown_ops import DocsBlock, DocRef
 
 
 def is_non_empty(doc: ParsedDocumentation):
@@ -20,12 +22,13 @@ def is_non_empty(doc: ParsedDocumentation):
 
 
 def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
-
     consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(manifest, graph, config)
 
     duplicate_docs_to_remove: List[ParsedDocumentation] = sum([t[1] for t in consolidated_docs_and_duplicates], [])
 
-    doc_file_to_docs, doc_files_to_rewrite = _construct_docs_to_rewrite(duplicate_docs_to_remove, manifest)
+    doc_file_to_retained_docs, doc_files_to_rewrite = _construct_docs_to_rewrite(duplicate_docs_to_remove, manifest)
+
+    rewrite_doc_files(doc_file_to_retained_docs, doc_files_to_rewrite)
 
     block_id_to_model_ids, ref_id_to_block_ids, block_id_to_file_ids = build_docs_block_to_ref_map(
         ref_id_and_column_extractor(manifest, config.project_name),
@@ -33,7 +36,35 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
         iter_node_or_sources_files(manifest)
     )
 
-    return doc_files_to_rewrite, doc_file_to_docs
+    affected_schema_files = {manifest.files[fid]
+                             for doc in duplicate_docs_to_remove
+                             for fid in block_id_to_file_ids[doc.unique_id]
+                             }
+
+    replacements = {
+        str(DocRef.from_parsed_doc(consolidated)): [DocRef.from_parsed_doc(d).re() for d in duplicates]
+        for consolidated, duplicates in consolidated_docs_and_duplicates
+    }
+    for file in affected_schema_files:
+        logger.info(f"process doc ref replacements in schema file '{file}'")
+        with open(file, 'r') as f:
+            contents = f.read()
+        for replacement, pattern_to_replace in replacements.items():
+            contents, n_replaced = re.subn(pattern_to_replace, replacement, contents)
+            if n_replaced>0:
+                logger.info(f"  replaced {n_replaced} occurences of '{pattern_to_replace}' with '{replacement}'")
+        with open(file, 'w') as f:
+            f.write(contents)
+
+
+def rewrite_doc_files(doc_file_to_retained_docs, doc_files_to_rewrite):
+    for doc_file_id, doc_file in doc_files_to_rewrite.items():
+        retained_docs = doc_file_to_retained_docs[doc_file_id]
+        with open(doc_file.path.absolute_path, 'w') as f:
+            for parsed_doc in sorted(retained_docs, key=lambda d: d.unique_id):
+                block = DocsBlock.from_parsed_doc(parsed_doc)
+                f.write(block.rendered)
+                f.write('\n')
 
 
 def find_consolidated_docs_and_duplicates(manifest: Manifest, graph: Graph, config: RuntimeConfig):
@@ -68,8 +99,8 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
     Returns:
         A tuple of:
             1. a map from doc (i.e. markdown) file id to the doc blocks that should be left in the file after removing duplicates
-            2. a map from file id to dbt `SourceFile`s for those files that need to be rewritten
-s
+            2. a map from doc (i.e. markdown) file id to its dbt `SourceFile`, only for those markdown files that need to be rewritten
+
     """
     doc_files_to_rewrite: Dict[str, AnySourceFile] = {d.file_id: manifest.files[d.file_id] for d in
                                                       duplicate_docs_to_remove}
@@ -78,6 +109,7 @@ s
     parsed_docs = manifest.docs.values()
     for d in parsed_docs:
         if d.file_id in doc_files_to_rewrite and d.unique_id not in duplicate_doc_ids:
+
             doc_file_to_retained_docs[d.file_id].append(d)
     return doc_file_to_retained_docs, doc_files_to_rewrite
 

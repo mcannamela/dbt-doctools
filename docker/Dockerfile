@@ -3,7 +3,7 @@ ENV PYTHONIOENCODING=utf-8
 ENV LANG C.UTF-8
 ENV PATH="${PATH}:/root/.local/bin"
 RUN apt-get update
-RUN apt-get install -y postgresql
+RUN apt-get install -y postgresql-client
 RUN curl --retry 5 -sSL https://install.python-poetry.org | python3 - --preview
 
 RUN poetry config virtualenvs.create false

@@ -7,7 +7,6 @@ import oyaml as yaml
 
 
 from dbt_doctools.markdown_ops import DocsBlock, DocRef, represent_rendered_docref
-from dbt_doctools.source_ops import maybe_extract_companion_markdown_file
 from dbt_doctools.yaml_ops import YamlFragment, ordered_fragment, apply_to_leaves
 
 
@@ -55,3 +54,13 @@ def create_or_append_companion_markdown(text_blocks: Dict[str, DocsBlock], schem
     with open(path, mode) as f:
         f.write(preamble)
         f.write(markdown_content)
+
+
+def maybe_extract_companion_markdown_file(manifest: Manifest, file: SchemaSourceFile):
+    path = file.path.full_path.replace('.yaml', '.md').replace('.yml', '.md')
+    for f in manifest.files.values():
+        if path == f.path.full_path:
+            return f
+
+def write_source():
+    raise NotImplementedError()

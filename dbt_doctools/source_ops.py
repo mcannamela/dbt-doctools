@@ -1,6 +1,5 @@
-from typing import Tuple, Dict, Any, TypeVar, Iterable, Callable, Optional, List
+from typing import Tuple, Dict, Iterable
 
-from dbt.config import RuntimeConfig
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedSourceDefinition
@@ -11,9 +10,7 @@ from dbt_doctools.yaml_io import overwrite_yaml_file, create_or_append_companion
 from dbt_doctools.yaml_ops import unsafe_get_matching_singleton_by_key, YamlFragment
 from copy import deepcopy
 
-from dbt.config import read_user_config, RuntimeConfig
-
-from dbt.graph import Graph
+from dbt.config import RuntimeConfig
 
 
 def extract_source(m: Manifest, project_name: str, source_name: str, table_name: str) -> Tuple[
@@ -44,13 +41,6 @@ def extract_source(m: Manifest, project_name: str, source_name: str, table_name:
     else:
         raise LookupError(
             f"Nothing found for source '{source_name}' table '{table_name}' in project '{project_name}'")
-
-
-def maybe_extract_companion_markdown_file(manifest: Manifest, file: SchemaSourceFile):
-    path = file.path.full_path.replace('.yaml', '.md').replace('.yml', '.md')
-    for f in manifest.files.values():
-        if path == f.path.full_path:
-            return f
 
 
 def extract_source_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str) -> YamlFragment:

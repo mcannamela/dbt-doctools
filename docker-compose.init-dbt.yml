@@ -1,9 +1,10 @@
 version: '3.9'
 services:
   init-dbt:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+#    build:
+#      context: .
+#      dockerfile: docker/Dockerfile
+    image: dbt-doctools:local
     depends_on:
       db:
         condition: service_healthy

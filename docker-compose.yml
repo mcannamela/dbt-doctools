@@ -16,9 +16,10 @@ services:
     volumes:
       - db:/var/lib/postgresql/data
   dbt-doctools:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+#    build:
+#      context: .
+#      dockerfile: docker/Dockerfile
+    image: dbt-doctools:local
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +31,7 @@ services:
     environment:
       - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
       - DBT_DATABASE=dbt_doctools_test
+      - PYTHONPATH=/dbt-doctools
 
 volumes:
   db:

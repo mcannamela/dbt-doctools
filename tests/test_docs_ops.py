@@ -1,10 +1,11 @@
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from networkx import DiGraph
-
+import pytest
 from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, compute_min_doc_depth, make_doc_sort_fun, \
     is_non_empty, find_consolidated_docs_and_duplicates
 
 
+@pytest.mark.skip(reason="Doesn't currently roll back")
 def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):
     consolidate_duplicate_docs_blocks_(manifest, graph, config)
 

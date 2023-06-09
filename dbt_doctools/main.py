@@ -4,6 +4,7 @@ import typer
 from loguru import logger
 
 from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
+from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_
 from dbt_doctools.source_ops import refactor_source_to_docs_blocks, write_refactored_source_and_markdown
 
 app = typer.Typer()
@@ -60,7 +61,6 @@ def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str 
 
     """
     config, _, manifest = _get_manifest_and_graph_and_config(project_dir)
-
     file_of_source, manifest, new_source_file_dfy, text_blocks = refactor_source_to_docs_blocks(config, manifest,
                                                                                                 source_name, table_name)
     write_refactored_source_and_markdown(file_of_source, manifest, new_source_file_dfy, text_blocks)
@@ -80,8 +80,7 @@ def consolidate_duplicate_docs_blocks(project_dir: str = None):
 
     """
     config, graph, manifest = _get_manifest_and_graph_and_config(project_dir)
-
-    pass
+    consolidate_duplicate_docs_blocks_(manifest, graph, config)
 
 
 @app.command()

@@ -15,3 +15,4 @@ COPY poetry.lock .
 RUN poetry install --no-root
 COPY . /dbt-doctools
 WORKDIR /dbt-doctools
+RUN git config --global --add safe.directory /dbt-doctools

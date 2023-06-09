@@ -2,6 +2,7 @@ from typing import Dict
 
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
+from dbt.contracts.graph.parsed import ParsedSourceDefinition
 from loguru import logger
 import oyaml as yaml
 
@@ -62,5 +63,5 @@ def maybe_extract_companion_markdown_file(manifest: Manifest, file: SchemaSource
         if path == f.path.full_path:
             return f
 
-def write_source():
+def write_source(s:ParsedSourceDefinition, f:SchemaSourceFile):
     raise NotImplementedError()

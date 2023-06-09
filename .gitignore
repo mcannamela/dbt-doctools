@@ -10,3 +10,6 @@ site
 htmlcov
 .pytest_cache
 coverage.xml
+dbt_packages/
+logs/
+target/

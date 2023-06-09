@@ -49,10 +49,11 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
         logger.info(f"process doc ref replacements in schema file '{file}'")
         with open(file, 'r') as f:
             contents = f.read()
-        for replacement, pattern_to_replace in replacements.items():
-            contents, n_replaced = re.subn(pattern_to_replace, replacement, contents)
-            if n_replaced>0:
-                logger.info(f"  replaced {n_replaced} occurences of '{pattern_to_replace}' with '{replacement}'")
+        for replacement, patterns_to_replace in replacements.items():
+            for pattern_to_replace in patterns_to_replace:
+                contents, n_replaced = re.subn(pattern_to_replace, replacement, contents)
+                if n_replaced>0:
+                    logger.info(f"  replaced {n_replaced} occurences of '{patterns_to_replace}' with '{replacement}'")
         with open(file, 'w') as f:
             f.write(contents)
 

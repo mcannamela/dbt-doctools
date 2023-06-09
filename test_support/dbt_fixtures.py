@@ -18,16 +18,16 @@ def dbt_dummy_template():
 def markdown_files():
     markdowns = [p.relative_to(repo_top_level()) for p in dbt_dummy_project_path().rglob('*.md')]
     yield markdowns
-    soft_reset(markdowns)
+    reset_files_to_index(markdowns)
 
 @fixture()
 def yaml_files():
     yamls = dbt_dummy_project_path().rglob('*.yml')
     yield yamls
-    soft_reset(yamls)
+    reset_files_to_index(yamls)
 
 
-def soft_reset(yamls):
+def reset_files_to_index(yamls):
     repo = Repo(repo_top_level())
     repo.index.checkout(yamls, force=True)
 

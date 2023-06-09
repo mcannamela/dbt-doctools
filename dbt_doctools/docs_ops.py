@@ -36,7 +36,7 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
         iter_node_or_sources_files(manifest)
     )
 
-    affected_schema_files = {manifest.files[fid]
+    affected_schema_files = {manifest.files[fid].path.full_path
                              for doc in duplicate_docs_to_remove
                              for fid in block_id_to_file_ids[doc.unique_id]
                              }

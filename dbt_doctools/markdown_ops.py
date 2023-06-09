@@ -74,7 +74,7 @@ class DocsBlock:
 @dataclass()
 class DocRef:
     name: str
-    comment: Optional[str] = field(default='')
+    comment: Optional[str] = field(default=None)
     project_name: Optional[str] = field(default=None)
 
     @classmethod

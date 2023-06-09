@@ -4,7 +4,7 @@ from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, compute_mi
     is_non_empty, find_consolidated_docs_and_duplicates
 
 
-def test_consolidate_duplicate_docs_blocks_(manifest, graph, config, dummy_project_files):
+def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):
     consolidate_duplicate_docs_blocks_(manifest, graph, config)
 
 

@@ -14,8 +14,8 @@ def dbt_dummy_project_path():
 def dummy_project_files():
     sh.git(*(f"config --global --add safe.directory {repo_top_level()}".split()))
     sh.git(*(f"restore --source=HEAD --staged --worktree -- {dbt_dummy_project_path()}".split()))
-    yield
-    sh.git(*(f"restore --source=HEAD --staged --worktree -- {dbt_dummy_project_path()}".split()))
+    # yield
+    # sh.git(*(f"restore --source=HEAD --staged --worktree -- {dbt_dummy_project_path()}".split()))
 
 
 @fixture()

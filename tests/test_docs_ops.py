@@ -1,11 +1,28 @@
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from networkx import DiGraph
+
+from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
 from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, compute_min_doc_depth, make_doc_sort_fun, \
-    is_non_empty, find_consolidated_docs_and_duplicates
+    is_non_empty, find_consolidated_docs_and_duplicates, find_degenerate_docs
+from test_support.dbt_fixtures import dbt_dummy_project_path
 
 
 def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):
+    def non_empty_docs(m):
+        return {k: d for k, d in m.docs.items() if is_non_empty(d)}
+
+    degenerate_docs = find_degenerate_docs(non_empty_docs(manifest))
+
     consolidate_duplicate_docs_blocks_(manifest, graph, config)
+
+    manifest_without_dupes, _, _ = obtain_manifest_and_graph_and_config(
+        dbt_command_args=['--project-dir', str(dbt_dummy_project_path())]
+    )
+
+    lack_of_degenerate_docs = find_degenerate_docs(non_empty_docs(manifest_without_dupes))
+
+    assert len(degenerate_docs) > 0
+    assert len(lack_of_degenerate_docs) == 0
 
 
 def test_find_consolidated_docs_and_duplicates(config, graph, manifest):

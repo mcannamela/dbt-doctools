@@ -22,6 +22,20 @@ def is_non_empty(doc: ParsedDocumentation):
 
 
 def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
+    """Merge `docs` blocks with identical text
+
+    Find all sets of `docs` blocks that are non-empty (have non-whitespace characters) and
+    have identical text, and consolidate them into a single block. The most upstream block
+    is preferred.
+
+    Args:
+        manifest: dbt `Manifest` for the project
+        graph: dbt `Graph` for the project
+        config: dbt `RuntimeConfig` that configured the `graph` and `manifest`
+
+    Returns:
+
+    """
     consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(manifest, graph, config)
 
     duplicate_docs_to_remove: List[ParsedDocumentation] = sum([t[1] for t in consolidated_docs_and_duplicates], [])
@@ -95,7 +109,7 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
 
     Args:
         duplicate_docs_to_remove: dbt doc blocks that are to be superceded by a block with identical contents
-        manifest: dbt Manifest for the project from which we will determine
+        manifest: dbt Manifest for the project
 
     Returns:
         A tuple of:

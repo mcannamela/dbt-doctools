@@ -12,6 +12,8 @@ services:
     working_dir: /dbt-doctools/dummy_dbt_project/dummy
     volumes:
       - .:/dbt-doctools
+    env_file:
+      - .env
     environment:
       - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
       - DBT_DATABASE=dbt_doctools_test

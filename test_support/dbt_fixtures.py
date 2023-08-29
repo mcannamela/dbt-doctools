@@ -4,6 +4,9 @@ from pytest import fixture
 from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
 from git import Repo
 import sh
+import os
+
+
 def repo_top_level():
     return Path(__file__).parent.parent
 
@@ -14,8 +17,9 @@ def dbt_dummy_project_path():
 def dummy_project_files():
     sh.git(*(f"config --global --add safe.directory {repo_top_level()}".split()))
     sh.git(*(f"restore --source=HEAD --staged --worktree -- {dbt_dummy_project_path()}".split()))
-    # yield
-    # sh.git(*(f"restore --source=HEAD --staged --worktree -- {dbt_dummy_project_path()}".split()))
+    yield
+    if bool(int(os.getenv('ROLLBACK_FILES_ON_TEST_END', 1))):
+        sh.git(*(f"restore --source=HEAD --staged --worktree -- {dbt_dummy_project_path()}".split()))
 
 
 @fixture()

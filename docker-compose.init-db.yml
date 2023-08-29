@@ -11,6 +11,8 @@ services:
     command: ['python', 'bin/init_db.py']
     volumes:
       - .:/dbt-doctools
+    env_file:
+      - .env
     environment:
       - DBT_PROFILES_DIR=/dbt-doctools/dummy_dbt_project
       - DBT_DATABASE=dbt_doctools_test

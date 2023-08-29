@@ -3,8 +3,40 @@ from networkx import DiGraph
 
 from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
 from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, compute_min_doc_depth, make_doc_sort_fun, \
-    is_non_empty, find_consolidated_docs_and_duplicates, find_degenerate_docs
+    is_non_empty, find_consolidated_docs_and_duplicates, find_degenerate_docs, propagate_column_descriptions_, \
+    propagate_breadth_first
 from test_support.dbt_fixtures import dbt_dummy_project_path
+
+
+def test_propagate_column_descriptions_(manifest, graph, config):
+    propagate_column_descriptions_(manifest, graph, config)
+
+def test_propagate_breadth_first():
+    g = DiGraph()
+    g.add_edge(0, 1)
+    g.add_edge(1, 2)
+    g.add_edge(2, 3)
+
+    g.add_edge(10, 2)
+
+    state = {n: {n} for n in g}
+
+    exp_state = {
+        0:{0},
+        10: {10},
+        1: {0,1},
+        2: {0,1,2, 10},
+        3: {0,1,2, 10, 3},
+    }
+
+    def propagate_it(a,b,s):
+        s[b] = s[b] | s[a]
+        s[b] = s[b] | s[a]
+        return s
+
+    propagated_state = propagate_breadth_first(g,[0, 10], state, propagate_it)
+
+    assert propagated_state == exp_state
 
 
 def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):

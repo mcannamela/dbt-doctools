@@ -4,7 +4,7 @@ import typer
 from loguru import logger
 
 from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
-from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_
+from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, propagate_column_descriptions_
 from dbt_doctools.source_ops import refactor_source_to_docs_blocks, write_refactored_source_and_markdown
 
 app = typer.Typer()
@@ -85,7 +85,8 @@ def consolidate_duplicate_docs_blocks(project_dir: str = None):
 
 @app.command()
 def propagate_column_descriptions(project_dir: str = None):
-    raise NotImplementedError()
+    config, graph, manifest = _get_manifest_and_graph_and_config(project_dir)
+    propagate_column_descriptions_(manifest, graph, config)
 
 
 def _get_manifest_and_graph_and_config(project_dir):

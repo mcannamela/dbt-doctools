@@ -1,7 +1,7 @@
 import itertools
 import re
 from collections import defaultdict
-from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping
+from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping, Any, TypeVar
 
 from dbt.config import RuntimeConfig
 from dbt.contracts.files import SchemaSourceFile, AnySourceFile
@@ -10,16 +10,15 @@ from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.graph import Graph
 from networkx import DiGraph
 from loguru import logger
+import networkx as nx
 
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
     source_id_and_column_extractor, iter_node_or_sources_files, IdSetMap
 from dbt_doctools.markdown_ops import DocsBlock, DocRef
 
-
-def is_non_empty(doc: ParsedDocumentation):
-    """True if a doc block contains non-whitespace characters"""
-    return len(doc.block_contents.strip()) > 0
-
+def propagate_column_descriptions_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
+    # propagate_breadth_first(graph.graph, )
+    raise NotImplementedError()
 
 def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     """Merge `docs` blocks with identical text
@@ -70,6 +69,11 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
                     logger.info(f"  replaced {n_replaced} occurences of '{patterns_to_replace}' with '{replacement}'")
         with open(file, 'w') as f:
             f.write(contents)
+
+
+def is_non_empty(doc: ParsedDocumentation):
+    """True if a doc block contains non-whitespace characters"""
+    return len(doc.block_contents.strip()) > 0
 
 
 def rewrite_doc_files(doc_file_to_retained_docs, doc_files_to_rewrite):
@@ -124,7 +128,6 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
     parsed_docs = manifest.docs.values()
     for d in parsed_docs:
         if d.file_id in doc_files_to_rewrite and d.unique_id not in duplicate_doc_ids:
-
             doc_file_to_retained_docs[d.file_id].append(d)
     return doc_file_to_retained_docs, doc_files_to_rewrite
 
@@ -173,3 +176,31 @@ def compute_min_doc_depth(g: DiGraph, get_blocks_iter: Callable[[str], Iterable[
         node_set = set(itertools.chain(*[g.successors(n) for n in node_set]))
         depth += 1
     return doc_depth
+
+N = TypeVar('N')
+S = TypeVar('S')
+def propagate_breadth_first(
+        g:DiGraph,
+        source_nodes:List[N],
+        state:S,
+        propagate_it:Callable[[N, N, S ], S]= lambda source, target, state: logger.info(f"Propagate from {source} to {target} with state {state}")
+)->S:
+    if not source_nodes:
+        return state
+
+    next_successors = []
+    for s in source_nodes:
+        successors = list(g.successors(s))
+        next_successors.append(successors)
+        for n in successors:
+            state = propagate_it(s, n, state)
+
+    for succ in next_successors:
+        state = propagate_breadth_first(g, succ, state, propagate_it)
+
+    return state
+
+
+
+
+

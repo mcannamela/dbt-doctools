@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Iterable
+from typing import Tuple, Dict, Iterable, Union
 
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
@@ -43,24 +43,25 @@ def extract_source(m: Manifest, project_name: str, source_name: str, table_name:
             f"Nothing found for source '{source_name}' table '{table_name}' in project '{project_name}'")
 
 
-def extract_source_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str) -> YamlFragment:
+def extract_source_yaml_fragment_from_file(file_of_source: Union[SchemaSourceFile, YamlFragment], source_name: str) -> YamlFragment:
     """Return the Python representation of the yaml fragment that defines the passed dbt source
 
     Args:
-        file_of_source: dbt yaml file that contains the source
+        file_of_source: dbt yaml file that contains the source, or it's `dict_from_yaml` property
         source_name: name of a dbt source in the file, which may contain many tables
 
     Returns:
         Python representation of the yaml defining the source named `source_name` in `file_of_source`
     """
+    yaml = file_of_source.dict_from_yaml if isinstance(file_of_source, SchemaSourceFile) else file_of_source
     source_dfy = unsafe_get_matching_singleton_by_key(
-        ((s['name'], s) for s in file_of_source.dict_from_yaml['sources']),
+        ((s['name'], s) for s in yaml['sources']),
         source_name
     )[1]
     return source_dfy
 
 
-def extract_source_table_yaml_fragment_from_file(file_of_source: SchemaSourceFile, source_name: str,
+def extract_source_table_yaml_fragment_from_file(file_of_source: Union[SchemaSourceFile, YamlFragment], source_name: str,
                                                  table_name: str) -> YamlFragment:
     """Return the Python representation of the yaml fragment that defines the passed dbt source table
 

@@ -9,27 +9,38 @@ from dbt.contracts.files import AnySourceFile
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.graph import Graph
+from dbt.node_types import NodeType
 from networkx import DiGraph
 from loguru import logger
 
 from dbt_doctools.graph_ops import propagate_breadth_first
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
-    source_id_and_column_extractor, iter_node_or_sources_files, build_ref_to_yaml_map
+    source_id_and_column_extractor, iter_node_or_sources_files, build_ref_to_yaml_map, inferred_id_type
 from dbt_doctools.markdown_ops import DocsBlock, DocRef
+from dbt_doctools.source_ops import extract_source_table_yaml_fragment_from_file
 from dbt_doctools.yaml_ops import YamlMap
 
 
 @dataclass
 class ColumnPropagationState:
     manifest: Manifest
+    source_id_to_schema_file_id: Dict[str, str]
     ref_id_to_schema_file_id: Dict[str, str]
     file_id_to_yaml_map: Dict[str, YamlMap]
 
-    def iter_columns(self, ref_id:str):
-        nm = self.manifest.nodes[ref_id].name
-        yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[ref_id]]
-        for column_name, column_def in yaml[nm]['columns'].items():
-            yield column_name, column_def
+    def iter_columns(self, source_or_ref_id:str):
+        if inferred_id_type(source_or_ref_id) is NodeType.Source:
+            s = self.manifest.sources[source_or_ref_id]
+            source_name, table_name = s.schema, s.name
+            file_yaml = self.file_id_to_yaml_map[self.source_id_to_schema_file_id[source_or_ref_id]]
+            yaml = extract_source_table_yaml_fragment_from_file(file_yaml, s.schema, s.name)
+            columns = yaml['columns']
+        else:
+            nm = self.manifest.nodes[source_or_ref_id].name
+            yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[source_or_ref_id]]
+            columns = yaml[nm]['columns']
+        for c in columns:
+            yield c['name'], c
 
     def patch_column_description_if_exists(self, ref_id:str, column_name:str, column_definition:YamlMap):
         nm = self.manifest.nodes[ref_id].name
@@ -40,9 +51,10 @@ class ColumnPropagationState:
 
 def propagate_column_descriptions_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     sources = {n for n in graph.graph if graph.graph.in_degree(n)==0}
-    ref_id_to_schema_file_id, file_id_to_yaml_map = build_ref_to_yaml_map(manifest)
+    source_id_to_schema_file_id, ref_id_to_schema_file_id, file_id_to_yaml_map = build_ref_to_yaml_map(manifest)
     state = ColumnPropagationState(
         manifest=manifest,
+        source_id_to_schema_file_id=source_id_to_schema_file_id,
         ref_id_to_schema_file_id=ref_id_to_schema_file_id,
         file_id_to_yaml_map=file_id_to_yaml_map
     )

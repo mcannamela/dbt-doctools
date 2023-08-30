@@ -12,16 +12,38 @@ from dbt_doctools.yaml_ops import YamlMap, YamlList
 
 IdSetMap = Dict[str, Set[str]]
 
+def inferred_id_type(s: str)->NodeType:
+    """Infer the dbt node type from its string identifier
+
+    We are being bad here, but in some places all we have is the string and it would be
+    inconvenient to lug the manifest around. It seems like a stable enough pattern for now
+    that `seed` identifiers will start with "seed" and so on, so long as we maintain test
+    coverage verifying this assumption.
+    """
+    if s.startswith('source.'):
+        return NodeType.Source
+    elif s.startswith('model.'):
+        return NodeType.Model
+    elif s.startswith('seed.'):
+        return NodeType.Seed
+    else:
+        raise NotImplementedError(f"Only source, seed, model are supported, got: {s}")
+
 def build_ref_to_yaml_map(manifest:Manifest):
     """Build maps from ref id to the schema file that documents it and from that file id to the yaml representation"""
+    source_id_to_schema_file_id = {}
     ref_id_to_schema_file_id = {}
     file_id_to_yaml_map = {}
     for ref_id, ref in manifest.nodes.items():
-        if ref.resource_type in {NodeType.Model, NodeType.Model}:
+        if ref.resource_type in {NodeType.Model, NodeType.Seed}:
             ref_id_to_schema_file_id[ref_id] = ref.patch_path
             file_id_to_yaml_map[ref.patch_path] = deepcopy(manifest.files[ref.patch_path].dict_from_yaml)
 
-    return ref_id_to_schema_file_id, file_id_to_yaml_map
+    for source_id, source in manifest.sources.items():
+        source_id_to_schema_file_id[source_id] = source.file_id
+        file_id_to_yaml_map[source.file_id] = deepcopy(manifest.files[source.file_id].dict_from_yaml)
+
+    return source_id_to_schema_file_id, ref_id_to_schema_file_id, file_id_to_yaml_map
 
 def build_docs_block_to_ref_map(
         extract_ref_id_and_columns: Callable[[YamlMap], Tuple[str, YamlList]],

@@ -1,8 +1,23 @@
+import pytest
 from dbt.contracts.files import SchemaSourceFile
+from dbt.node_types import NodeType
 
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, iter_node_or_sources_files, \
-    iter_schema_source_files, source_id_and_column_extractor, ref_id_and_column_extractor, iter_source_tables
+    iter_schema_source_files, source_id_and_column_extractor, ref_id_and_column_extractor, iter_source_tables, \
+    inferred_id_type
 
+
+def test_inferred_id_type_for_models_and_seeds(manifest):
+    for node_id, node in manifest.nodes.items():
+        if node.resource_type in {NodeType.Model, NodeType.Seed}:
+            assert inferred_id_type(node_id) == node.resource_type
+        else:
+            with pytest.raises(NotImplementedError):
+                inferred_id_type(node_id)
+
+def test_inferred_id_type_for_sources(manifest):
+    for source_id, source in manifest.sources.items():
+        assert inferred_id_type(source_id) == NodeType.Source
 
 def test_build_docs_block_to_ref_map(manifest, config):
     project_name = config.project_name

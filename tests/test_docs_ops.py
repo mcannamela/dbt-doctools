@@ -8,7 +8,8 @@ from test_support.dbt_fixtures import dbt_dummy_project_path
 
 
 def test_propagate_column_descriptions_(manifest, graph, config):
-    propagate_column_descriptions_(manifest, graph, config)
+    state = propagate_column_descriptions_(manifest, graph, config)
+    assert True
 
 
 def test_consolidate_duplicate_docs_blocks_(manifest, graph, config):

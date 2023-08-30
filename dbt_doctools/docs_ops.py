@@ -1,6 +1,7 @@
 import itertools
 import re
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping
 
 from dbt.config import RuntimeConfig
@@ -11,13 +12,43 @@ from dbt.graph import Graph
 from networkx import DiGraph
 from loguru import logger
 
+from dbt_doctools.graph_ops import propagate_breadth_first
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
-    source_id_and_column_extractor, iter_node_or_sources_files
+    source_id_and_column_extractor, iter_node_or_sources_files, build_ref_to_yaml_map
 from dbt_doctools.markdown_ops import DocsBlock, DocRef
+from dbt_doctools.yaml_ops import YamlMap
+
+
+@dataclass
+class ColumnPropagationState:
+    manifest: Manifest
+    ref_id_to_schema_file_id: Dict[str, str]
+    file_id_to_yaml_map: Dict[str, YamlMap]
+
+    def iter_columns(self, ref_id:str):
+        nm = self.manifest.nodes[ref_id].name
+        yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[ref_id]]
+        for column_name, column_def in yaml[nm]['columns'].items():
+            yield column_name, column_def
+
+    def patch_column_description_if_exists(self, ref_id:str, column_name:str, column_definition:YamlMap):
+        nm = self.manifest.nodes[ref_id].name
+        yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[ref_id]]
+        if column_name in yaml[nm]['columns']:
+            yaml[nm]['columns'][column_name]['description'] = column_definition['description']
+            logger.info(f"  Patched column {column_name} in {ref_id}")
 
 def propagate_column_descriptions_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
-    # propagate_breadth_first(graph.graph, )
-    raise NotImplementedError()
+    sources = {n for n in graph.graph if graph.graph.in_degree(n)==0}
+    ref_id_to_schema_file_id, file_id_to_yaml_map = build_ref_to_yaml_map(manifest)
+    state = ColumnPropagationState(
+        manifest=manifest,
+        ref_id_to_schema_file_id=ref_id_to_schema_file_id,
+        file_id_to_yaml_map=file_id_to_yaml_map
+    )
+
+    new_state = propagate_breadth_first(graph.graph, sources, state, propagate_doc_block)
+    return new_state
 
 def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
     """Merge `docs` blocks with identical text
@@ -175,6 +206,11 @@ def compute_min_doc_depth(g: DiGraph, get_blocks_iter: Callable[[str], Iterable[
         node_set = set(itertools.chain(*[g.successors(n) for n in node_set]))
         depth += 1
     return doc_depth
+
+def propagate_doc_block(source_node, target_node, state):
+    logger.info(f"Patching from {source_node}")
+    for source_column_name, source_column_definition in state.iter_columns(source_node):
+        state.patch_column_description_if_exists(target_node, source_column_name, source_column_definition)
 
 
 

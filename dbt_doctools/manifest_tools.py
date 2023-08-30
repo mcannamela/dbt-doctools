@@ -1,15 +1,27 @@
 import itertools
 from collections import defaultdict
+from copy import deepcopy
 from typing import Iterable, Dict, Tuple, Callable, Set
 
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
+from dbt.node_types import NodeType
 
 from dbt_doctools.markdown_ops import DocsBlock
 from dbt_doctools.yaml_ops import YamlMap, YamlList
 
 IdSetMap = Dict[str, Set[str]]
 
+def build_ref_to_yaml_map(manifest:Manifest):
+    """Build maps from ref id to the schema file that documents it and from that file id to the yaml representation"""
+    ref_id_to_schema_file_id = {}
+    file_id_to_yaml_map = {}
+    for ref_id, ref in manifest.nodes.items():
+        if ref.resource_type in {NodeType.Model, NodeType.Model}:
+            ref_id_to_schema_file_id[ref_id] = ref.patch_path
+            file_id_to_yaml_map[ref.patch_path] = deepcopy(manifest.files[ref.patch_path].dict_from_yaml)
+
+    return ref_id_to_schema_file_id, file_id_to_yaml_map
 
 def build_docs_block_to_ref_map(
         extract_ref_id_and_columns: Callable[[YamlMap], Tuple[str, YamlList]],
@@ -53,6 +65,7 @@ def build_docs_block_to_ref_map(
                     block_id_to_file_ids[block_id].add(fid)
 
     return block_id_to_model_ids, ref_id_to_block_ids, block_id_to_file_ids
+
 
 
 def ref_id_and_column_extractor(manifest:Manifest, project_name:str)->Callable[[YamlMap], Tuple[str, YamlList]]:

@@ -17,9 +17,16 @@ def propagate_breadth_first(
         return state
 
     next_successors = []
+    seen_successors = set()
     for s in source_nodes:
-        successors = list(g.successors(s))
-        next_successors.append(successors)
+        try:
+            successors = list(g.successors(s))
+        except:
+            raise
+        else:
+            next_successors.append([s for s in successors if s not in seen_successors])
+            seen_successors |= set(successors)
+
         for n in successors:
             state = propagate_it(s, n, state)
 

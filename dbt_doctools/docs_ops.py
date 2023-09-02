@@ -15,10 +15,11 @@ from loguru import logger
 
 from dbt_doctools.graph_ops import propagate_breadth_first
 from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
-    source_id_and_column_extractor, iter_node_or_sources_files, build_ref_to_yaml_map, inferred_id_type
+    source_id_and_column_extractor, iter_node_or_sources_files, build_ref_to_yaml_map, unsafe_inferred_id_type, \
+    inferred_id_type
 from dbt_doctools.markdown_ops import DocsBlock, DocRef
 from dbt_doctools.source_ops import extract_source_table_yaml_fragment_from_file
-from dbt_doctools.yaml_ops import YamlMap
+from dbt_doctools.yaml_ops import YamlMap, unsafe_get_matching_singleton_by_key
 
 
 @dataclass
@@ -29,7 +30,7 @@ class ColumnPropagationState:
     file_id_to_yaml_map: Dict[str, YamlMap]
 
     def iter_columns(self, source_or_ref_id:str):
-        if inferred_id_type(source_or_ref_id) is NodeType.Source:
+        if unsafe_inferred_id_type(source_or_ref_id) is NodeType.Source:
             s = self.manifest.sources[source_or_ref_id]
             source_name, table_name = s.schema, s.name
             file_yaml = self.file_id_to_yaml_map[self.source_id_to_schema_file_id[source_or_ref_id]]
@@ -38,19 +39,26 @@ class ColumnPropagationState:
         else:
             nm = self.manifest.nodes[source_or_ref_id].name
             yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[source_or_ref_id]]
-            columns = yaml[nm]['columns']
+            try:
+                columns = unsafe_get_matching_singleton_by_key(((m['name'], m) for m in yaml['models']), nm)[1]['columns']
+            except:
+                raise
         for c in columns:
             yield c['name'], c
 
     def patch_column_description_if_exists(self, ref_id:str, column_name:str, column_definition:YamlMap):
+        if inferred_id_type(ref_id) is not NodeType.Model:
+            raise NotImplementedError(f"Patching nodes of this type not supported: {ref_id}")
         nm = self.manifest.nodes[ref_id].name
         yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[ref_id]]
-        if column_name in yaml[nm]['columns']:
-            yaml[nm]['columns'][column_name]['description'] = column_definition['description']
+        columns = unsafe_get_matching_singleton_by_key(((m['name'], m) for m in yaml['models']), nm)[1]['columns']
+        if column_name in columns:
+            columns[column_name]['description'] = column_definition['description']
             logger.info(f"  Patched column {column_name} in {ref_id}")
+        return self
 
 def propagate_column_descriptions_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
-    sources = {n for n in graph.graph if graph.graph.in_degree(n)==0}
+    sources = {n for n in graph.graph if graph.graph.in_degree(n) == 0 and inferred_id_type(n) in {NodeType.Source, NodeType.Model, NodeType.Seed}}
     source_id_to_schema_file_id, ref_id_to_schema_file_id, file_id_to_yaml_map = build_ref_to_yaml_map(manifest)
     state = ColumnPropagationState(
         manifest=manifest,
@@ -219,11 +227,17 @@ def compute_min_doc_depth(g: DiGraph, get_blocks_iter: Callable[[str], Iterable[
         depth += 1
     return doc_depth
 
-def propagate_doc_block(source_node, target_node, state):
-    logger.info(f"Patching from {source_node}")
-    for source_column_name, source_column_definition in state.iter_columns(source_node):
-        state.patch_column_description_if_exists(target_node, source_column_name, source_column_definition)
+def propagate_doc_block(source_node:str, target_node:str, state:ColumnPropagationState)->ColumnPropagationState:
+    source_type_accepted = inferred_id_type(source_node) in {NodeType.Source, NodeType.Seed, NodeType.Model}
+    target_type_accepted = inferred_id_type(source_node) in {NodeType.Model}
+    if source_type_accepted and target_type_accepted:
+        logger.info(f"Patching from {source_node}")
+        for source_column_name, source_column_definition in state.iter_columns(source_node):
+            state.patch_column_description_if_exists(target_node, source_column_name, source_column_definition)
+    else:
+        logger.info(f"Not propagating from {source_node} to {target_node} due to node types.")
 
+    return state
 
 
 

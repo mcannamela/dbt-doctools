@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 from copy import deepcopy
-from typing import Iterable, Dict, Tuple, Callable, Set
+from typing import Iterable, Dict, Tuple, Callable, Set, Optional
 
 from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
@@ -12,7 +12,13 @@ from dbt_doctools.yaml_ops import YamlMap, YamlList
 
 IdSetMap = Dict[str, Set[str]]
 
-def inferred_id_type(s: str)->NodeType:
+
+def inferred_id_type(s: str)->Optional[NodeType]:
+    try:
+        return unsafe_inferred_id_type(s)
+    except NotImplementedError:
+        return
+def unsafe_inferred_id_type(s: str)->NodeType:
     """Infer the dbt node type from its string identifier
 
     We are being bad here, but in some places all we have is the string and it would be

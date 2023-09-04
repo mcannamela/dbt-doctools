@@ -134,7 +134,7 @@ def propagate_column_descriptions_(
 
     for fid in new_state.changed_file_ids:
         with open(manifest.files[fid].path.absolute_path, "w") as f:
-            yaml.dump(new_state.file_id_to_yaml_map[fid], f)
+            yaml.dump(new_state.file_id_to_yaml_map[fid], f, sort_keys=False)
 
     return new_state
 

@@ -25,3 +25,5 @@ models:
           - not_null
       - name: old_value
         description: "{{doc('one_layer__old_value')}}"
+      - name: another_value
+        description: "Punted on this description"

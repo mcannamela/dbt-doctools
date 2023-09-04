@@ -12,6 +12,8 @@ models:
           - not_null
       - name: old_value
         description: "{{doc('zero_layer__old_value')}}"
+      - name: another_value
+        description: "It's another value"
 
   - name: old_one_layer
     description: "A starter dbt model"

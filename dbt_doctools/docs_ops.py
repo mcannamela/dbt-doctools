@@ -1,9 +1,10 @@
 import itertools
 import re
 from collections import defaultdict
-from dataclasses import dataclass
-from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping, Union
+from dataclasses import dataclass, Field, field
+from typing import Iterable, List, Dict, Tuple, Callable, MutableMapping, Union, Set
 
+import yaml
 from dbt.config import RuntimeConfig
 from dbt.contracts.files import AnySourceFile, SchemaSourceFile
 from dbt.contracts.graph.manifest import Manifest
@@ -14,12 +15,22 @@ from networkx import DiGraph
 from loguru import logger
 
 from dbt_doctools.graph_ops import propagate_breadth_first
-from dbt_doctools.manifest_tools import build_docs_block_to_ref_map, ref_id_and_column_extractor, \
-    source_id_and_column_extractor, iter_node_or_sources_files, build_ref_to_yaml_map, unsafe_inferred_id_type, \
-    inferred_id_type
+from dbt_doctools.manifest_tools import (
+    build_docs_block_to_ref_map,
+    ref_id_and_column_extractor,
+    source_id_and_column_extractor,
+    iter_node_or_sources_files,
+    build_ref_to_yaml_map,
+    unsafe_inferred_id_type,
+    inferred_id_type,
+)
 from dbt_doctools.markdown_ops import DocsBlock, DocRef
 from dbt_doctools.source_ops import extract_source_table_yaml_fragment_from_file
-from dbt_doctools.yaml_ops import YamlMap, unsafe_get_matching_singleton_by_key, YamlFragment
+from dbt_doctools.yaml_ops import (
+    YamlMap,
+    unsafe_get_matching_singleton_by_key,
+    YamlFragment,
+)
 
 
 @dataclass
@@ -28,33 +39,54 @@ class ColumnPropagationState:
     source_id_to_schema_file_id: Dict[str, str]
     ref_id_to_schema_file_id: Dict[str, str]
     file_id_to_yaml_map: Dict[str, YamlMap]
+    changed_file_ids: Set[str] = field(default_factory=set)
 
-    def iter_columns(self, source_or_ref_id:str):
+    def iter_columns(self, source_or_ref_id: str):
         if unsafe_inferred_id_type(source_or_ref_id) is NodeType.Source:
             s = self.manifest.sources[source_or_ref_id]
             source_name, table_name = s.schema, s.name
-            file_yaml = self.file_id_to_yaml_map[self.source_id_to_schema_file_id[source_or_ref_id]]
-            yaml = extract_source_table_yaml_fragment_from_file(file_yaml, s.schema, s.name)
-            columns = yaml['columns']
+            file_yaml = self.file_id_to_yaml_map[
+                self.source_id_to_schema_file_id[source_or_ref_id]
+            ]
+            yaml = extract_source_table_yaml_fragment_from_file(
+                file_yaml, s.schema, s.name
+            )
+            columns = yaml["columns"]
         else:
             nm = self.manifest.nodes[source_or_ref_id].name
-            yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[source_or_ref_id]]
-            columns = extract_model_yaml_fragment_from_file(yaml, nm)['columns']
+            yaml = self.file_id_to_yaml_map[
+                self.ref_id_to_schema_file_id[source_or_ref_id]
+            ]
+            columns = extract_model_yaml_fragment_from_file(yaml, nm)["columns"]
         for c in columns:
-            yield c['name'], c
+            yield c["name"], c
 
-    def patch_column_description_if_exists(self, ref_id:str, column_name:str, column_definition:YamlMap):
+    def patch_column_description_if_exists(
+        self, ref_id: str, column_name: str, column_definition: YamlMap
+    ):
         if inferred_id_type(ref_id) is not NodeType.Model:
-            raise NotImplementedError(f"Patching nodes of this type not supported: {ref_id}")
+            raise NotImplementedError(
+                f"Patching nodes of this type not supported: {ref_id}"
+            )
         nm = self.manifest.nodes[ref_id].name
-        yaml = self.file_id_to_yaml_map[self.ref_id_to_schema_file_id[ref_id]]
-        columns = extract_model_yaml_fragment_from_file(yaml, nm)['columns']
-        if column_name in columns:
-            columns[column_name]['description'] = column_definition['description']
-            logger.info(f"  Patched column {column_name} in {ref_id}")
+        file_id = self.ref_id_to_schema_file_id[ref_id]
+        yaml = self.file_id_to_yaml_map[file_id]
+        columns = extract_model_yaml_fragment_from_file(yaml, nm)["columns"]
+        column_dict = {c["name"]: c for c in columns}
+        if column_name in column_dict:
+            current_description = column_dict[column_name]["description"]
+            if current_description != column_definition["description"]:
+                self.changed_file_ids.add(file_id)
+                column_dict[column_name]["description"] = column_definition[
+                    "description"
+                ]
+                logger.info(f"  Patched column {column_name} in {ref_id}")
         return self
 
-def extract_model_yaml_fragment_from_file(file_of_model: Union[SchemaSourceFile, YamlFragment], model_name: str) -> YamlFragment:
+
+def extract_model_yaml_fragment_from_file(
+    file_of_model: Union[SchemaSourceFile, YamlFragment], model_name: str
+) -> YamlFragment:
     """Return the Python representation of the yaml fragment that defines the passed dbt model
 
     Args:
@@ -64,27 +96,52 @@ def extract_model_yaml_fragment_from_file(file_of_model: Union[SchemaSourceFile,
     Returns:
         Python representation of the yaml defining the model named `model_name` in `file_of_model`
     """
-    yaml = file_of_model.dict_from_yaml if isinstance(file_of_model, SchemaSourceFile) else file_of_model
+    yaml = (
+        file_of_model.dict_from_yaml
+        if isinstance(file_of_model, SchemaSourceFile)
+        else file_of_model
+    )
     model_dfy = unsafe_get_matching_singleton_by_key(
-        ((s['name'], s) for s in yaml['models']),
-        model_name
+        ((s["name"], s) for s in yaml["models"]), model_name
     )[1]
     return model_dfy
 
-def propagate_column_descriptions_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
-    sources = {n for n in graph.graph if graph.graph.in_degree(n) == 0 and inferred_id_type(n) in {NodeType.Source, NodeType.Model, NodeType.Seed}}
-    source_id_to_schema_file_id, ref_id_to_schema_file_id, file_id_to_yaml_map = build_ref_to_yaml_map(manifest)
+
+def propagate_column_descriptions_(
+    manifest: Manifest, graph: Graph, config: RuntimeConfig
+):
+    sources = {
+        n
+        for n in graph.graph
+        if graph.graph.in_degree(n) == 0
+        and inferred_id_type(n) in {NodeType.Source, NodeType.Model, NodeType.Seed}
+    }
+    (
+        source_id_to_schema_file_id,
+        ref_id_to_schema_file_id,
+        file_id_to_yaml_map,
+    ) = build_ref_to_yaml_map(manifest)
     state = ColumnPropagationState(
         manifest=manifest,
         source_id_to_schema_file_id=source_id_to_schema_file_id,
         ref_id_to_schema_file_id=ref_id_to_schema_file_id,
-        file_id_to_yaml_map=file_id_to_yaml_map
+        file_id_to_yaml_map=file_id_to_yaml_map,
     )
 
-    new_state = propagate_breadth_first(graph.graph, sources, state, propagate_doc_block)
+    new_state = propagate_breadth_first(
+        graph.graph, sources, state, propagate_doc_block
+    )
+
+    for fid in new_state.changed_file_ids:
+        with open(manifest.files[fid].path.absolute_path, "w") as f:
+            yaml.dump(new_state.file_id_to_yaml_map[fid], f)
+
     return new_state
 
-def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config: RuntimeConfig):
+
+def consolidate_duplicate_docs_blocks_(
+    manifest: Manifest, graph: Graph, config: RuntimeConfig
+):
     """Merge `docs` blocks with identical text
 
     Find all sets of `docs` blocks that are non-empty (have non-whitespace characters) and
@@ -99,39 +156,56 @@ def consolidate_duplicate_docs_blocks_(manifest: Manifest, graph: Graph, config:
     Returns:
 
     """
-    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(manifest, graph, config)
+    consolidated_docs_and_duplicates = find_consolidated_docs_and_duplicates(
+        manifest, graph, config
+    )
 
-    duplicate_docs_to_remove: List[ParsedDocumentation] = sum([t[1] for t in consolidated_docs_and_duplicates], [])
+    duplicate_docs_to_remove: List[ParsedDocumentation] = sum(
+        [t[1] for t in consolidated_docs_and_duplicates], []
+    )
 
-    doc_file_to_retained_docs, doc_files_to_rewrite = _construct_docs_to_rewrite(duplicate_docs_to_remove, manifest)
+    doc_file_to_retained_docs, doc_files_to_rewrite = _construct_docs_to_rewrite(
+        duplicate_docs_to_remove, manifest
+    )
 
     rewrite_doc_files(doc_file_to_retained_docs, doc_files_to_rewrite)
 
-    block_id_to_model_ids, ref_id_to_block_ids, block_id_to_file_ids = build_docs_block_to_ref_map(
+    (
+        block_id_to_model_ids,
+        ref_id_to_block_ids,
+        block_id_to_file_ids,
+    ) = build_docs_block_to_ref_map(
         ref_id_and_column_extractor(manifest, config.project_name),
         source_id_and_column_extractor(manifest, config.project_name),
-        iter_node_or_sources_files(manifest)
+        iter_node_or_sources_files(manifest),
     )
 
-    affected_schema_files = {manifest.files[fid].path.full_path
-                             for doc in duplicate_docs_to_remove
-                             for fid in block_id_to_file_ids[doc.unique_id]
-                             }
+    affected_schema_files = {
+        manifest.files[fid].path.full_path
+        for doc in duplicate_docs_to_remove
+        for fid in block_id_to_file_ids[doc.unique_id]
+    }
 
     replacements = {
-        str(DocRef.from_parsed_doc(consolidated)): [DocRef.from_parsed_doc(d).re() for d in duplicates]
+        str(DocRef.from_parsed_doc(consolidated)): [
+            DocRef.from_parsed_doc(d).re() for d in duplicates
+        ]
         for consolidated, duplicates in consolidated_docs_and_duplicates
     }
     for file in affected_schema_files:
         logger.info(f"process doc ref replacements in schema file '{file}'")
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             contents = f.read()
         for replacement, patterns_to_replace in replacements.items():
             for pattern_to_replace in patterns_to_replace:
-                contents, n_replaced = re.subn(pattern_to_replace, replacement, contents)
-                if n_replaced>0:
-                    logger.info(f"  replaced {n_replaced} occurences of '{patterns_to_replace}' with '{replacement}'")
-        with open(file, 'w') as f:
+                contents, n_replaced = re.subn(
+                    pattern_to_replace, replacement, contents
+                )
+                if n_replaced > 0:
+                    logger.info(
+                        f"  replaced {n_replaced} occurences of '{patterns_to_replace}' with '{replacement}'"
+                    )
+        with open(file, "w") as f:
             f.write(contents)
 
 
@@ -143,19 +217,23 @@ def is_non_empty(doc: ParsedDocumentation):
 def rewrite_doc_files(doc_file_to_retained_docs, doc_files_to_rewrite):
     for doc_file_id, doc_file in doc_files_to_rewrite.items():
         retained_docs = doc_file_to_retained_docs[doc_file_id]
-        with open(doc_file.path.absolute_path, 'w') as f:
+        with open(doc_file.path.absolute_path, "w") as f:
             for parsed_doc in sorted(retained_docs, key=lambda d: d.unique_id):
                 block = DocsBlock.from_parsed_doc(parsed_doc)
                 f.write(block.rendered)
-                f.write('\n')
+                f.write("\n")
 
 
-def find_consolidated_docs_and_duplicates(manifest: Manifest, graph: Graph, config: RuntimeConfig):
+def find_consolidated_docs_and_duplicates(
+    manifest: Manifest, graph: Graph, config: RuntimeConfig
+):
     non_empty_docs = {k: d for k, d in manifest.docs.items() if is_non_empty(d)}
     degenerate_docs = find_degenerate_docs(non_empty_docs)
     sort_key = make_doc_sort_fun(manifest, graph, config)
 
-    def split_degenerates(x: List[ParsedDocumentation]) -> Tuple[ParsedDocumentation, List[ParsedDocumentation]]:
+    def split_degenerates(
+        x: List[ParsedDocumentation],
+    ) -> Tuple[ParsedDocumentation, List[ParsedDocumentation]]:
         y = list(sorted(x, key=lambda d: sort_key(d.unique_id)))
         return y[0], y[1:]
 
@@ -164,15 +242,20 @@ def find_consolidated_docs_and_duplicates(manifest: Manifest, graph: Graph, conf
 
 
 def find_degenerate_docs(non_empty_docs):
-    block_content_to_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
+    block_content_to_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(
+        list
+    )
     for d in non_empty_docs.values():
         block_content_to_docs[d.block_contents.strip()].append(d)
-    degenerate_docs: List[List[ParsedDocumentation]] = [v for v in block_content_to_docs.values() if len(v) > 1]
+    degenerate_docs: List[List[ParsedDocumentation]] = [
+        v for v in block_content_to_docs.values() if len(v) > 1
+    ]
     return degenerate_docs
 
 
-def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentation], manifest: Manifest) -> Tuple[
-    MutableMapping[str, List[ParsedDocumentation]], Dict[str, AnySourceFile]]:
+def _construct_docs_to_rewrite(
+    duplicate_docs_to_remove: List[ParsedDocumentation], manifest: Manifest
+) -> Tuple[MutableMapping[str, List[ParsedDocumentation]], Dict[str, AnySourceFile]]:
     """Find all files affected by removal of duplicates and list the blocks that should remain after deduplication
 
     Args:
@@ -185,10 +268,13 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
             2. a map from doc (i.e. markdown) file id to its dbt `SourceFile`, only for those markdown files that need to be rewritten
 
     """
-    doc_files_to_rewrite: Dict[str, AnySourceFile] = {d.file_id: manifest.files[d.file_id] for d in
-                                                      duplicate_docs_to_remove}
+    doc_files_to_rewrite: Dict[str, AnySourceFile] = {
+        d.file_id: manifest.files[d.file_id] for d in duplicate_docs_to_remove
+    }
     duplicate_doc_ids = {d.unique_id for d in duplicate_docs_to_remove}
-    doc_file_to_retained_docs: MutableMapping[str, List[ParsedDocumentation]] = defaultdict(list)
+    doc_file_to_retained_docs: MutableMapping[
+        str, List[ParsedDocumentation]
+    ] = defaultdict(list)
     parsed_docs = manifest.docs.values()
     for d in parsed_docs:
         if d.file_id in doc_files_to_rewrite and d.unique_id not in duplicate_doc_ids:
@@ -196,13 +282,14 @@ def _construct_docs_to_rewrite(duplicate_docs_to_remove: List[ParsedDocumentatio
     return doc_file_to_retained_docs, doc_files_to_rewrite
 
 
-def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig) -> Callable[[str], Tuple[int, str]]:
-    """Build a function that provides a sort key for doc block ids to sort them in order of appearance in the dbt dag
-    """
+def make_doc_sort_fun(
+    manifest: Manifest, graph: Graph, config: RuntimeConfig
+) -> Callable[[str], Tuple[int, str]]:
+    """Build a function that provides a sort key for doc block ids to sort them in order of appearance in the dbt dag"""
     _, ref_id_to_block_ids, _ = build_docs_block_to_ref_map(
         ref_id_and_column_extractor(manifest, config.project_name),
         source_id_and_column_extractor(manifest, config.project_name),
-        iter_node_or_sources_files(manifest)
+        iter_node_or_sources_files(manifest),
     )
 
     def get_blocks_iter(n):
@@ -212,12 +299,14 @@ def make_doc_sort_fun(manifest: Manifest, graph: Graph, config: RuntimeConfig) -
     doc_depth = compute_min_doc_depth(g, get_blocks_iter)
 
     def sort_key(doc_name: str) -> Tuple[int, str]:
-        return doc_depth.get(doc_name, 2 ** 31), doc_name
+        return doc_depth.get(doc_name, 2**31), doc_name
 
     return sort_key
 
 
-def compute_min_doc_depth(g: DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]) -> Dict[str, int]:
+def compute_min_doc_depth(
+    g: DiGraph, get_blocks_iter: Callable[[str], Iterable[str]]
+) -> Dict[str, int]:
     """Find the depth in the dbt graph from the source layer where doc blocks are first used
 
     Args:
@@ -241,18 +330,27 @@ def compute_min_doc_depth(g: DiGraph, get_blocks_iter: Callable[[str], Iterable[
         depth += 1
     return doc_depth
 
-def propagate_doc_block(source_node:str, target_node:str, state:ColumnPropagationState)->ColumnPropagationState:
-    source_type_accepted = inferred_id_type(source_node) in {NodeType.Source, NodeType.Seed, NodeType.Model}
+
+def propagate_doc_block(
+    source_node: str, target_node: str, state: ColumnPropagationState
+) -> ColumnPropagationState:
+    source_type_accepted = inferred_id_type(source_node) in {
+        NodeType.Source,
+        NodeType.Seed,
+        NodeType.Model,
+    }
     target_type_accepted = inferred_id_type(target_node) in {NodeType.Model}
     if source_type_accepted and target_type_accepted:
         logger.info(f"Patching from {source_node}")
-        for source_column_name, source_column_definition in state.iter_columns(source_node):
-            state.patch_column_description_if_exists(target_node, source_column_name, source_column_definition)
+        for source_column_name, source_column_definition in state.iter_columns(
+            source_node
+        ):
+            state.patch_column_description_if_exists(
+                target_node, source_column_name, source_column_definition
+            )
     else:
-        logger.info(f"Not propagating from {source_node} to {target_node} due to node types.")
+        logger.info(
+            f"Not propagating from {source_node} to {target_node} due to node types."
+        )
 
     return state
-
-
-
-

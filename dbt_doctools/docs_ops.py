@@ -129,12 +129,17 @@ def propagate_column_descriptions_(
     )
 
     new_state = propagate_breadth_first(
-        graph.graph, sources, state, propagate_doc_block
+        graph.graph, list(sources), state, propagate_doc_block
     )
 
     for fid in new_state.changed_file_ids:
         with open(manifest.files[fid].path.absolute_path, "w") as f:
-            yaml.dump(new_state.file_id_to_yaml_map[fid], f, sort_keys=False)
+            yaml.dump(
+                new_state.file_id_to_yaml_map[fid],
+                f,
+                sort_keys=False,
+                default_flow_style=False,
+            )
 
     return new_state
 

@@ -1,17 +1,26 @@
 from pathlib import Path
+from typing import Optional
 
 import typer
 from loguru import logger
 
 from dbt_doctools.dbt_api import obtain_manifest_and_graph_and_config
-from dbt_doctools.docs_ops import consolidate_duplicate_docs_blocks_, propagate_column_descriptions_
-from dbt_doctools.source_ops import refactor_source_to_docs_blocks, write_refactored_source_and_markdown
+from dbt_doctools.docs_ops import (
+    consolidate_duplicate_docs_blocks_,
+    propagate_column_descriptions_,
+)
+from dbt_doctools.source_ops import (
+    refactor_source_to_docs_blocks,
+    write_refactored_source_and_markdown,
+)
 
 app = typer.Typer()
 
 
 @app.command()
-def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str = None):
+def refactor_to_docs_blocks(
+    source_name: str, table_name: str, project_dir: Optional[str] = None
+):
     """Replace plain text column descriptions in a dbt source table with `doc` references
 
     For the given source and table, find all column descriptions that do not already contain a `doc` reference, make a
@@ -60,14 +69,22 @@ def refactor_to_docs_blocks(source_name: str, table_name: str, project_dir: str 
     Returns:
 
     """
-    config, _, manifest = _get_manifest_and_graph_and_config(project_dir)
-    file_of_source, manifest, new_source_file_dfy, text_blocks = refactor_source_to_docs_blocks(config, manifest,
-                                                                                                source_name, table_name)
-    write_refactored_source_and_markdown(file_of_source, manifest, new_source_file_dfy, text_blocks)
+    config, _, manifest = _get_manifest_and_graph_and_config(project_dir=project_dir)
+    (
+        file_of_source,
+        manifest,
+        new_source_file_dfy,
+        text_blocks,
+    ) = refactor_source_to_docs_blocks(config, manifest, source_name, table_name)
+    write_refactored_source_and_markdown(
+        file_of_source, manifest, new_source_file_dfy, text_blocks
+    )
 
 
 @app.command()
-def consolidate_duplicate_docs_blocks(project_dir: str = None):
+def consolidate_duplicate_docs_blocks(
+    selector: Optional[str] = None, project_dir: Optional[str] = None
+):
     """Combine docs blocks that have identical non-empty content into a single block
 
     Empty docs blocks i.e. stubs waiting to be filled in are ignored. Blocks referenced at the roots of the DAG are
@@ -79,21 +96,28 @@ def consolidate_duplicate_docs_blocks(project_dir: str = None):
     Returns:
 
     """
-    config, graph, manifest = _get_manifest_and_graph_and_config(project_dir)
+    config, graph, manifest = _get_manifest_and_graph_and_config(selector, project_dir)
     consolidate_duplicate_docs_blocks_(manifest, graph, config)
 
 
 @app.command()
-def propagate_column_descriptions(project_dir: str = None):
-    config, graph, manifest = _get_manifest_and_graph_and_config(project_dir)
+def propagate_column_descriptions(
+    selector: Optional[str] = None, project_dir: Optional[str] = None
+):
+    config, graph, manifest = _get_manifest_and_graph_and_config(selector, project_dir)
     propagate_column_descriptions_(manifest, graph, config)
 
 
-def _get_manifest_and_graph_and_config(project_dir):
+def _get_manifest_and_graph_and_config(
+    selector: Optional[str] = None, project_dir: Optional[str] = None
+):
     project_dir = str(Path.cwd()) if project_dir is None else project_dir
     logger.info(f"Using project dir: {project_dir}")
+    dbt_command_args = ["--project-dir", project_dir]
+    if selector is not None:
+        dbt_command_args.extend(["-s", selector])
     manifest, graph, config = obtain_manifest_and_graph_and_config(
-        dbt_command_args=['--project-dir', project_dir]
+        dbt_command_args=dbt_command_args
     )
     return config, graph, manifest
 

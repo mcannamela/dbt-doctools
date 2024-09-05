@@ -1,6 +1,6 @@
-FROM python:3.9
+FROM python:3.12
 ENV PYTHONIOENCODING=utf-8
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 ENV PATH="${PATH}:/root/.local/bin"
 RUN apt-get update
 RUN apt-get install -y postgresql-client
